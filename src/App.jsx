@@ -26,7 +26,7 @@ import './index.css'
 
 export default function App() {
   return (
-    <BrowserRouter basename="/Fleetmanagement">
+    <BrowserRouter basename="/Greenie-Fleet-Intelligence">
       <Routes>
         {/* Root → login */}
         <Route path="/" element={<Navigate to="/login" replace />} />

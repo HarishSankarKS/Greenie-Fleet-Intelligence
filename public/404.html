@@ -9,7 +9,7 @@
         // When GitHub serves a 404, this page redirects back to index.html
         // preserving the path as a query param, which index.html then restores.
         var l = window.location;
-        var segmentCount = 1; // number of path segments in the repo base (1 for /Fleetmanagement/)
+        var segmentCount = 1; // number of path segments in the repo base (1 for /Greenie-Fleet-Intelligence/)
         l.replace(
             l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
             l.pathname.split('/').slice(0, 1 + segmentCount).join('/') + '/?/' +
