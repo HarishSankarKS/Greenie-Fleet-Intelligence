@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Activity, Clock, AlertTriangle, Filter, RefreshCw, Cpu, Zap, TrendingUp, Radio } from 'lucide-react'
+import { Filter, RefreshCw, Cpu, Zap, TrendingUp, Radio } from 'lucide-react'
 import { useDRLRoutes, SITES, TRUCKS, TRUCK_COLORS } from '../utils/drlCVRP'
 
 delete L.Icon.Default.prototype._getIconUrl
@@ -52,20 +52,17 @@ export default function Monitoring() {
     const [filter, setFilter] = useState('all')
     const [algStep, setAlgStep] = useState(0)
 
-    // Cycle algorithm step during solving
     useEffect(() => {
         if (phase === 'solving') {
             const iv = setInterval(() => setAlgStep(s => (s + 1) % 3), 700)
             return () => clearInterval(iv)
         }
-        if (phase === 'ready') setAlgStep(-1) // -1 = all done
+        if (phase === 'ready') setAlgStep(-1)
     }, [phase])
 
     const statusSites = SITES.map(s => {
         const route = routes.find(r => r.assignedSites.some(a => a.id === s.id))
-        const order = route ? route.assignedSites.findIndex(a => a.id === s.id) : -1
-        let status = 'idle'
-        if (route) status = order === 0 ? 'active' : 'active'
+        const status = route ? 'active' : 'idle'
         return { ...s, status, truckColor: route?.color || '#6b7280' }
     })
     const filtered = filter === 'all' ? statusSites : statusSites.filter(s => s.status === filter)
@@ -77,7 +74,7 @@ export default function Monitoring() {
 
     return (
         <div>
-            {/* Header */}
+            {/* ── Page header ── */}
             <div className="page-header">
                 <div>
                     <div className="page-title">Monitoring / DRL Route Optimisation</div>
@@ -105,7 +102,7 @@ export default function Monitoring() {
                 </div>
             </div>
 
-            {/* Algorithm pipeline */}
+            {/* ── Algorithm pipeline ── */}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 0, marginBottom: 16,
                 background: 'linear-gradient(135deg,rgba(15,118,110,0.06),rgba(26,50,99,0.06))',
@@ -162,9 +159,9 @@ export default function Monitoring() {
                 </div>
             )}
 
-            {/* Filter */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
-                <Filter size={13} style={{ color: 'var(--color-text-muted)' }} />
+            {/* Filter bar */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                <Filter size={14} style={{ color: '#6b7280' }} />
                 {['all', 'active', 'idle'].map(f => (
                     <button key={f} onClick={() => setFilter(f)}
                         className={`btn btn-sm ${filter === f ? 'btn-primary' : 'btn-outline'}`}>
@@ -178,32 +175,30 @@ export default function Monitoring() {
                 )}
             </div>
 
-            {/* Map + Side panels */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16, alignItems: 'start' }}>
+            {/* ── TOP ROW: Map (left) | Live Traffic (right) ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, marginBottom: 16, alignItems: 'start' }}>
 
                 {/* Map */}
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div className="card-header" style={{ borderRadius: 'var(--radius) var(--radius) 0 0' }}>
+                    <div className="card-header">
                         <span className="card-title">Live Route Map — Coimbatore</span>
                         <span style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
                             <Radio size={10} style={{ color: '#10b981' }} />
-                            DRL-computed routes via OSRM · TomTom traffic overlay
+                            DRL routes via OSRM · TomTom overlay
                         </span>
                     </div>
-                    <div style={{ height: 480 }}>
+                    <div style={{ height: 440 }}>
                         <MapContainer center={[11.02, 76.97]} zoom={12} style={{ height: '100%', width: '100%' }}>
                             <TileLayer
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
-
-                            {/* Site markers */}
                             {filtered.map(s => (
                                 <Marker key={s.id} position={[s.lat, s.lng]} icon={siteIcon(s.status)}>
                                     <Popup>
-                                        <div style={{ minWidth: 160, fontFamily: 'Inter,sans-serif' }}>
+                                        <div style={{ minWidth: 150, fontFamily: 'Inter,sans-serif' }}>
                                             <strong>{s.name}</strong><br />
-                                            <span style={{ fontSize: 12, color: '#555' }}>{s.type} · {s.demand}T demand</span><br />
+                                            <span style={{ fontSize: 12, color: '#555' }}>{s.type} · {s.demand}T</span><br />
                                             {s.truckColor !== '#6b7280' && (
                                                 <span style={{ fontSize: 11, color: s.truckColor, fontWeight: 600 }}>● Assigned</span>
                                             )}
@@ -211,8 +206,6 @@ export default function Monitoring() {
                                     </Popup>
                                 </Marker>
                             ))}
-
-                            {/* DRL Route polylines (real OSRM roads) */}
                             {routes.map(r => {
                                 const geom = routeGeometries[r.truck.id]
                                 if (!geom || geom.length < 2) return null
@@ -224,8 +217,6 @@ export default function Monitoring() {
                                     />
                                 )
                             })}
-
-                            {/* Traffic checkpoint markers */}
                             {trafficSpeeds.map(t => (
                                 <Marker key={t.id} position={[t.lat, t.lng]} icon={trafficIcon(t.congestion)}>
                                     <Popup>
@@ -243,108 +234,114 @@ export default function Monitoring() {
                     </div>
                 </div>
 
-                {/* Right panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-                    {/* Truck route cards */}
-                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                        <div className="card-header">
-                            <span className="card-title">Optimised Routes</span>
-                            <span style={{ fontSize: 11, color: '#9ca3af' }}>{routes.length} trucks</span>
-                        </div>
-                        <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-                            {phase !== 'ready' ? (
-                                <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
-                                    {phaseInfo.text}…
-                                </div>
-                            ) : routes.map(r => (
-                                <div key={r.truck.id} style={{
-                                    padding: '12px 16px', borderBottom: '1px solid #f0f2f5',
-                                    borderLeft: `3px solid ${r.color}`,
-                                }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                        <span style={{ fontWeight: 700, fontSize: 13, color: '#1a1a2e' }}>{r.truck.plate}</span>
+                {/* Live Traffic */}
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div className="card-header">
+                        <span className="card-title">Live Traffic</span>
+                        <span style={{
+                            fontSize: 11, background: '#e8f9f0', color: '#1a9c55',
+                            padding: '3px 9px', borderRadius: 10, fontWeight: 700,
+                        }}>TomTom</span>
+                    </div>
+                    <div>
+                        {trafficSpeeds.length === 0 ? (
+                            <div style={{ padding: 20, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>Loading…</div>
+                        ) : trafficSpeeds.map(t => {
+                            const barW = Math.round(t.congestion * 100)
+                            const col = congestionColor(t.congestion)
+                            const lbl = congestionLabel(t.congestion)
+                            return (
+                                <div key={t.id} style={{ padding: '12px 16px', borderBottom: '1px solid #f5f6f8' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                                            <div style={{ width: 9, height: 9, borderRadius: '50%', background: col, flexShrink: 0 }} />
+                                            <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{t.name}</span>
+                                        </div>
                                         <span style={{
-                                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-                                            background: r.color + '18', color: r.color,
-                                        }}>{r.utilisation}% load</span>
+                                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                                            background: col + '18', color: col,
+                                        }}>{lbl}</span>
                                     </div>
-                                    <div style={{ fontSize: 11, color: '#5a6478' }}>
-                                        {r.truck.driver} · {r.totalLoad}T / {r.truck.capacity}T
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                                        <span style={{ fontSize: 12, fontWeight: 700, color: col }}>{t.currentSpeed} km/h</span>
+                                        <span style={{ fontSize: 10.5, color: '#9ca3af' }}>of {t.freeFlowSpeed} km/h</span>
                                     </div>
-                                    <div style={{ fontSize: 11, color: '#5a6478', marginTop: 2 }}>
-                                        🗺️ {r.assignedSites.map(s => s.id).join(' → ')}
+                                    <div style={{ background: '#f0f2f5', borderRadius: 4, height: 5, overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', width: `${barW}%`, background: col, borderRadius: 4, transition: 'width 0.5s ease' }} />
                                     </div>
-                                    <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 11 }}>
-                                        <span style={{ color: '#0f766e', fontWeight: 600 }}>ETA {r.eta}</span>
-                                        <span style={{ color: '#9ca3af' }}>{Math.round(r.totalTimeSec / 60)} min</span>
-                                        <span style={{ color: '#9ca3af' }}>{(r.totalDistM / 1000).toFixed(1)} km</span>
-                                    </div>
+                                    <div style={{ fontSize: 10, color: '#c8d0de', marginTop: 3 }}>{barW}% of capacity</div>
                                 </div>
-                            ))}
-                        </div>
+                            )
+                        })}
                     </div>
+                </div>
+            </div>
 
-                    {/* Live Traffic — redesigned as clean horizontal rows */}
-                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                        <div className="card-header">
-                            <span className="card-title">Live Traffic — Coimbatore</span>
-                            <span style={{
-                                fontSize: 11, background: '#e8f9f0', color: '#1a9c55',
-                                padding: '3px 9px', borderRadius: 10, fontWeight: 700,
-                            }}>TomTom</span>
-                        </div>
-                        <div style={{ padding: '8px 0' }}>
-                            {trafficSpeeds.length === 0 ? (
-                                <div style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', padding: '12px 16px' }}>Loading…</div>
-                            ) : trafficSpeeds.map(t => {
-                                const barW = Math.round(t.congestion * 100)
-                                const col = congestionColor(t.congestion)
-                                const lbl = congestionLabel(t.congestion)
-                                return (
-                                    <div key={t.id} style={{ padding: '8px 16px', borderBottom: '1px solid #f5f6f8' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: col, flexShrink: 0 }} />
-                                                <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1a1a2e' }}>{t.name}</span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span style={{ fontSize: 11.5, fontWeight: 700, color: col }}>{t.currentSpeed} km/h</span>
-                                                <span style={{
-                                                    fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 8,
-                                                    background: col + '18', color: col, minWidth: 60, textAlign: 'center',
-                                                }}>{lbl}</span>
-                                            </div>
-                                        </div>
-                                        {/* Progress bar showing flow vs free-flow */}
-                                        <div style={{ background: '#f0f2f5', borderRadius: 4, height: 4, overflow: 'hidden' }}>
-                                            <div style={{ height: '100%', width: `${barW}%`, background: col, borderRadius: 4, transition: 'width 0.5s ease' }} />
-                                        </div>
-                                        <div style={{ fontSize: 10, color: '#b0b8c8', marginTop: 3 }}>
-                                            Free flow: {t.freeFlowSpeed} km/h · {barW}% of capacity
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </div>
+            {/* ── BOTTOM ROW: Optimised Routes (left) | Collection Sites (right) ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+
+                {/* Optimised Routes */}
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div className="card-header">
+                        <span className="card-title">Optimised Routes</span>
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{routes.length} trucks</span>
                     </div>
-
-                    {/* Site list */}
-                    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                        <div className="card-header">
-                            <span className="card-title">Sites ({filtered.length})</span>
-                        </div>
-                        <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                            {filtered.map(s => (
-                                <div key={s.id} style={{ padding: '9px 16px', borderBottom: '1px solid #f5f6f8' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#1a1a2e' }}>{s.name}</div>
-                                        <span style={{ fontSize: 10, fontWeight: 700, color: s.truckColor }}>{s.id}</span>
-                                    </div>
-                                    <div style={{ fontSize: 11, color: '#8899aa', marginTop: 1 }}>{s.type} · {s.demand}T</div>
+                    <div>
+                        {phase !== 'ready' ? (
+                            <div style={{ padding: '28px', textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>
+                                {phaseInfo.text}…
+                            </div>
+                        ) : routes.map(r => (
+                            <div key={r.truck.id} style={{
+                                padding: '13px 18px', borderBottom: '1px solid #f0f2f5',
+                                borderLeft: `3px solid ${r.color}`,
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                                    <span style={{ fontWeight: 700, fontSize: 13.5, color: '#1a1a2e' }}>{r.truck.plate}</span>
+                                    <span style={{
+                                        fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10,
+                                        background: r.color + '18', color: r.color,
+                                    }}>{r.utilisation}% load</span>
                                 </div>
-                            ))}
-                        </div>
+                                <div style={{ fontSize: 12, color: '#5a6478', marginBottom: 2 }}>
+                                    {r.truck.driver} · {r.totalLoad}T / {r.truck.capacity}T
+                                </div>
+                                <div style={{ fontSize: 11.5, color: '#5a6478', marginBottom: 4 }}>
+                                    🗺️ {r.assignedSites.map(s => s.id).join(' → ')}
+                                </div>
+                                <div style={{ display: 'flex', gap: 14, fontSize: 11.5 }}>
+                                    <span style={{ color: '#0f766e', fontWeight: 700 }}>ETA {r.eta}</span>
+                                    <span style={{ color: '#9ca3af' }}>{Math.round(r.totalTimeSec / 60)} min</span>
+                                    <span style={{ color: '#9ca3af' }}>{(r.totalDistM / 1000).toFixed(1)} km</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Collection Sites — 2-col inner grid */}
+                <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                    <div className="card-header">
+                        <span className="card-title">Collection Sites</span>
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{filtered.length} sites</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                        {filtered.map((s, i) => (
+                            <div key={s.id} style={{
+                                padding: '11px 14px',
+                                borderBottom: '1px solid #f5f6f8',
+                                borderRight: i % 2 === 0 ? '1px solid #f5f6f8' : 'none',
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.3 }}>{s.name}</div>
+                                    <span style={{
+                                        fontSize: 9.5, fontWeight: 700, color: s.truckColor,
+                                        background: s.truckColor + '18', padding: '1px 6px', borderRadius: 5, flexShrink: 0,
+                                    }}>{s.id}</span>
+                                </div>
+                                <div style={{ fontSize: 10.5, color: '#8899aa', marginTop: 3 }}>{s.type} · {s.demand}T</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
