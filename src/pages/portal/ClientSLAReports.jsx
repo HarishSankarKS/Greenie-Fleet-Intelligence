@@ -12,11 +12,11 @@ const monthlyData = [
 ]
 
 const breachLog = [
-    { id: 'BR-041', date: '28 Feb 2026', type: 'Missed Collection', site: 'Tambaram Zone B', severity: 'high', penalty: '₹5,000', resolution: 'Pending' },
-    { id: 'BR-040', date: '25 Feb 2026', type: 'Late Collection', site: 'Porur Industrial Area', severity: 'medium', penalty: '₹2,000', resolution: 'Acknowledged' },
-    { id: 'BR-039', date: '22 Feb 2026', type: 'Weight Discrepancy', site: 'Adyar Transit Hub', severity: 'low', penalty: '₹500', resolution: 'Resolved' },
-    { id: 'BR-038', date: '18 Feb 2026', type: 'Missed Collection', site: 'Ambattur Depot', severity: 'high', penalty: '₹5,000', resolution: 'Resolved' },
-    { id: 'BR-037', date: '15 Feb 2026', type: 'Late Collection', site: 'Guindy Transfer Station', severity: 'medium', penalty: '₹2,000', resolution: 'Resolved' },
+    { id: 'BR-041', date: '06 Mar 2026', type: 'Missed Collection', site: 'Ondipudur Gate', severity: 'high', penalty: '₹5,000', resolution: 'Pending' },
+    { id: 'BR-040', date: '03 Mar 2026', type: 'Late Collection', site: 'Selvapuram West Site', severity: 'medium', penalty: '₹2,000', resolution: 'Acknowledged' },
+    { id: 'BR-039', date: '28 Feb 2026', type: 'Weight Discrepancy', site: 'Gandhipuram Collection Pt', severity: 'low', penalty: '₹500', resolution: 'Resolved' },
+    { id: 'BR-038', date: '24 Feb 2026', type: 'Missed Collection', site: 'Thudiyalur Site', severity: 'high', penalty: '₹5,000', resolution: 'Resolved' },
+    { id: 'BR-037', date: '20 Feb 2026', type: 'Late Collection', site: 'Ukkadam Sorting Yard', severity: 'medium', penalty: '₹2,000', resolution: 'Resolved' },
 ]
 
 const severityConfig = {

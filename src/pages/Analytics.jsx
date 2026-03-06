@@ -23,11 +23,12 @@ const wasteByType = [
 ]
 
 const sitePerf = [
-    { site: 'Chennai Central Hub', efficiency: 94, collections: 78 },
-    { site: 'Coimbatore North Depot', efficiency: 87, collections: 92 },
-    { site: 'Salem Industrial Hub', efficiency: 91, collections: 105 },
-    { site: 'Trichy West Base', efficiency: 76, collections: 54 },
-    { site: 'Tirunelveli Gateway', efficiency: 89, collections: 68 },
+    { site: 'RS Puram C&D Site', efficiency: 94, collections: 78 },
+    { site: 'Gandhipuram Collection Pt', efficiency: 87, collections: 92 },
+    { site: 'Saravanampatti IT Zone', efficiency: 91, collections: 105 },
+    { site: 'Singanallur Depot', efficiency: 76, collections: 54 },
+    { site: 'Ukkadam Sorting Yard', efficiency: 93, collections: 89 },
+    { site: 'Ondipudur Gate', efficiency: 85, collections: 68 },
 ]
 
 export default function Analytics() {

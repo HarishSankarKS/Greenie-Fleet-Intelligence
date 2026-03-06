@@ -103,7 +103,7 @@ export default function ClientComplaints() {
                                 </div>
                                 <div style={{ gridColumn: '1/-1' }}>
                                     <label style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 4, display: 'block' }}>Site (optional)</label>
-                                    <input value={form.site} onChange={e => setForm({ ...form, site: e.target.value })} placeholder="e.g. Anna Nagar Collection Point" style={inputStyle} />
+                                    <input value={form.site} onChange={e => setForm({ ...form, site: e.target.value })} placeholder="e.g. RS Puram C&D Site" style={inputStyle} />
                                 </div>
                                 <div style={{ gridColumn: '1/-1' }}>
                                     <label style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', marginBottom: 4, display: 'block' }}>Description</label>

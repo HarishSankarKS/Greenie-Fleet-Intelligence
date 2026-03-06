@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
     LayoutDashboard, MapPin, Map, BarChart3, Truck, Users,
-    Wrench, CreditCard, Settings, ChevronRight
+    Wrench, Settings
 } from 'lucide-react'
 
 const navItems = [
@@ -22,7 +22,6 @@ const navItems = [
     },
     {
         group: 'Account', items: [
-            { to: '/subscriptions', icon: CreditCard, label: 'Subscriptions' },
             { to: '/settings', icon: Settings, label: 'Settings' },
         ]
     },

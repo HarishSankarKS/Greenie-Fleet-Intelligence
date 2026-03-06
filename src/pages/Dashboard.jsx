@@ -25,11 +25,11 @@ const statusData = [
 ]
 
 const recentActivity = [
-    { id: 'U-001', site: 'Chennai Central Hub', type: 'C&D Waste', status: 'completed', time: '10 min ago', driver: 'Murugan R.' },
-    { id: 'U-012', site: 'Coimbatore North Depot', type: 'Mixed Debris', status: 'active', time: '25 min ago', driver: 'Kavitha S.' },
-    { id: 'U-034', site: 'Salem Industrial Hub', type: 'Concrete', status: 'pending', time: '1 hr ago', driver: 'Senthil K.' },
-    { id: 'U-007', site: 'Madurai South Site', type: 'C&D Waste', status: 'maintenance', time: '2 hr ago', driver: 'Priya M.' },
-    { id: 'U-019', site: 'Trichy West Base', type: 'Rubble', status: 'completed', time: '3 hr ago', driver: 'Arjun T.' },
+    { id: 'U-001', site: 'RS Puram C&D Site', type: 'C&D Waste', status: 'completed', time: '10 min ago', driver: 'Murugan R.' },
+    { id: 'U-012', site: 'Gandhipuram Collection Pt', type: 'Mixed Debris', status: 'active', time: '25 min ago', driver: 'Karthik S.' },
+    { id: 'U-034', site: 'Saravanampatti IT Zone', type: 'C&D Waste', status: 'pending', time: '1 hr ago', driver: 'Selvam P.' },
+    { id: 'U-007', site: 'Singanallur Depot', type: 'Mixed Waste', status: 'maintenance', time: '2 hr ago', driver: 'Rajan K.' },
+    { id: 'U-019', site: 'Ukkadam Sorting Yard', type: 'Concrete Rubble', status: 'completed', time: '3 hr ago', driver: 'Kavitha S.' },
 ]
 
 const kpis = [
@@ -46,7 +46,7 @@ export default function Dashboard() {
             <div className="page-header">
                 <div>
                     <div className="page-title">Operations Dashboard</div>
-                    <div className="page-subtitle">Real-time overview of C&D waste collection units · Saturday, 21 Feb 2026</div>
+                    <div className="page-subtitle">Real-time overview of C&D waste collection units across Coimbatore · Friday, 6 Mar 2026</div>
                 </div>
                 <button className="btn btn-primary"><Plus size={15} /> New Collection</button>
             </div>

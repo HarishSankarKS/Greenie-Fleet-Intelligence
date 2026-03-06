@@ -70,11 +70,11 @@ const sparkData = [
 ]
 
 const recentActivity = [
-    { site: 'Anna Nagar Collection Point', time: '09:42 AM', driver: 'Rajan K.', weight: '4.2 T', status: 'Completed' },
-    { site: 'Adyar Transit Hub', time: '10:15 AM', driver: 'Murugan S.', weight: '6.8 T', status: 'Completed' },
-    { site: 'T. Nagar Market Site', time: '11:00 AM', driver: 'Selvam R.', weight: '—', status: 'In Transit' },
-    { site: 'Velachery Depot', time: '11:30 AM', driver: 'Karthik P.', weight: '—', status: 'Pending' },
-    { site: 'Tambaram Zone B', time: '08:20 AM', driver: 'Unassigned', weight: '—', status: 'Missed' },
+    { site: 'RS Puram C&D Site', time: '09:42 AM', driver: 'Murugan R.', weight: '4.2 T', status: 'Completed' },
+    { site: 'Gandhipuram Collection Pt', time: '10:15 AM', driver: 'Karthik S.', weight: '3.2 T', status: 'Completed' },
+    { site: 'Saravanampatti IT Zone', time: '11:00 AM', driver: 'Selvam P.', weight: '—', status: 'In Transit' },
+    { site: 'Singanallur Depot', time: '11:30 AM', driver: 'Rajan K.', weight: '—', status: 'Pending' },
+    { site: 'Ondipudur Gate', time: '08:20 AM', driver: 'Unassigned', weight: '—', status: 'Missed' },
 ]
 
 const statusColors = {
@@ -93,7 +93,7 @@ export default function ClientDashboard() {
                     Good morning, Project Manager 👋
                 </h1>
                 <p style={{ margin: '4px 0 0', color: '#5a6478', fontSize: 13.5 }}>
-                    Sunday, 02 March 2026 · Region: Tamil Nadu South · Account ID: ACM-2024-007
+                    Friday, 06 March 2026 · Region: Coimbatore · Account ID: ACM-2024-007
                 </p>
             </div>
 

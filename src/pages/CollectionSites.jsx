@@ -2,12 +2,16 @@ import { useState } from 'react'
 import { Plus, Search, MapPin, Edit2, Trash2, Eye } from 'lucide-react'
 
 const initialSites = [
-    { id: 'CS-001', name: 'Chennai Central Hub', location: 'Anna Salai, Chennai', type: 'C&D Waste', capacity: '50 tons', status: 'active', units: 8, lastCollection: '2026-02-21' },
-    { id: 'CS-002', name: 'Coimbatore North Depot', location: 'Ganapathy, Coimbatore', type: 'Mixed Debris', capacity: '80 tons', status: 'active', units: 12, lastCollection: '2026-02-20' },
-    { id: 'CS-003', name: 'Madurai South Site', location: 'Mattuthavani, Madurai', type: 'Concrete Rubble', capacity: '30 tons', status: 'idle', units: 4, lastCollection: '2026-02-19' },
-    { id: 'CS-004', name: 'Salem Industrial Hub', location: 'Ammapet Industrial Area, Salem', type: 'C&D Waste', capacity: '120 tons', status: 'active', units: 15, lastCollection: '2026-02-21' },
-    { id: 'CS-005', name: 'Trichy West Base', location: 'Ariyamangalam, Trichy', type: 'Mixed Waste', capacity: '60 tons', status: 'maintenance', units: 6, lastCollection: '2026-02-18' },
-    { id: 'CS-006', name: 'Tirunelveli Gateway', location: 'Palayamkottai, Tirunelveli', type: 'C&D Waste', capacity: '45 tons', status: 'active', units: 9, lastCollection: '2026-02-21' },
+    { id: 'CBE-01', name: 'RS Puram C&D Site', location: 'RS Puram, Coimbatore', type: 'C&D Waste', capacity: '50 tons', status: 'active', units: 8, lastCollection: '2026-03-06' },
+    { id: 'CBE-02', name: 'Gandhipuram Collection Pt', location: 'Gandhipuram, Coimbatore', type: 'Mixed Debris', capacity: '80 tons', status: 'active', units: 12, lastCollection: '2026-03-06' },
+    { id: 'CBE-03', name: 'Ukkadam Sorting Yard', location: 'Ukkadam, Coimbatore', type: 'Concrete Rubble', capacity: '100 tons', status: 'active', units: 10, lastCollection: '2026-03-06' },
+    { id: 'CBE-04', name: 'Saravanampatti IT Zone', location: 'Saravanampatti, Coimbatore', type: 'C&D Waste', capacity: '60 tons', status: 'active', units: 9, lastCollection: '2026-03-05' },
+    { id: 'CBE-05', name: 'Singanallur Depot', location: 'Singanallur, Coimbatore', type: 'Mixed Waste', capacity: '70 tons', status: 'active', units: 11, lastCollection: '2026-03-06' },
+    { id: 'CBE-06', name: 'Selvapuram West Site', location: 'Selvapuram, Coimbatore', type: 'C&D Waste', capacity: '45 tons', status: 'idle', units: 5, lastCollection: '2026-03-04' },
+    { id: 'CBE-07', name: 'Kuniyamuthur Hub', location: 'Kuniyamuthur, Coimbatore', type: 'Rubble', capacity: '40 tons', status: 'active', units: 6, lastCollection: '2026-03-06' },
+    { id: 'CBE-08', name: 'Vadavalli Transfer Stn', location: 'Vadavalli, Coimbatore', type: 'C&D Waste', capacity: '55 tons', status: 'maintenance', units: 4, lastCollection: '2026-03-03' },
+    { id: 'CBE-09', name: 'Ondipudur Gate', location: 'Ondipudur, Coimbatore', type: 'C&D Waste', capacity: '50 tons', status: 'active', units: 7, lastCollection: '2026-03-06' },
+    { id: 'CBE-10', name: 'Thudiyalur Site', location: 'Thudiyalur, Coimbatore', type: 'Mixed Debris', capacity: '35 tons', status: 'active', units: 5, lastCollection: '2026-03-05' },
 ]
 
 export default function CollectionSites() {

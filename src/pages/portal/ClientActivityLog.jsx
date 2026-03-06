@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { Search, Download, Filter, ChevronDown, MapPin, Clock, Truck, AlertTriangle, CheckCircle, XCircle, ArrowUpDown } from 'lucide-react'
 
 const ACTIVITY_DATA = [
-    { id: 'COL-2401', site: 'Anna Nagar Collection Point', driver: 'Rajan K.', truck: 'TN 09 AB 1234', time: '09:42 AM', weight: '4.2 T', status: 'completed', type: 'C&D Waste', duration: '18 min' },
-    { id: 'COL-2402', site: 'Adyar Transit Hub', driver: 'Murugan S.', truck: 'TN 09 CD 5678', time: '10:15 AM', weight: '6.8 T', status: 'completed', type: 'Mixed Debris', duration: '24 min' },
-    { id: 'COL-2403', site: 'T. Nagar Market Site', driver: 'Selvam R.', truck: 'TN 09 EF 9012', time: '11:00 AM', weight: '—', status: 'in-transit', type: 'C&D Waste', duration: '—' },
-    { id: 'COL-2404', site: 'Velachery Depot', driver: 'Karthik P.', truck: 'TN 09 GH 3456', time: '11:30 AM', weight: '—', status: 'pending', type: 'Rubble', duration: '—' },
-    { id: 'COL-2405', site: 'Tambaram Zone B', driver: 'Unassigned', truck: '—', time: '08:20 AM', weight: '—', status: 'missed', type: 'C&D Waste', duration: '—' },
-    { id: 'COL-2406', site: 'Guindy Transfer Station', driver: 'Arun M.', truck: 'TN 09 KL 2345', time: '08:55 AM', weight: '3.1 T', status: 'completed', type: 'Concrete Rubble', duration: '15 min' },
-    { id: 'COL-2407', site: 'Porur Industrial Area', driver: 'Vignesh R.', truck: 'TN 09 MN 6789', time: '12:15 PM', weight: '—', status: 'pending', type: 'Mixed Waste', duration: '—' },
-    { id: 'COL-2408', site: 'Perambur Sorting Yard', driver: 'Rajesh T.', truck: 'TN 09 OP 3456', time: '01:30 PM', weight: '—', status: 'pending', type: 'C&D Waste', duration: '—' },
-    { id: 'COL-2409', site: 'Sholinganallur Hub', driver: 'Kumar S.', truck: 'TN 09 QR 7890', time: '07:30 AM', weight: '5.4 T', status: 'completed', type: 'Mixed Debris', duration: '22 min' },
-    { id: 'COL-2410', site: 'Ambattur Depot', driver: 'Dinesh K.', truck: 'TN 09 ST 1234', time: '09:00 AM', weight: '—', status: 'missed', type: 'Rubble', duration: '—' },
+    { id: 'COL-2401', site: 'RS Puram C&D Site', driver: 'Murugan R.', truck: 'TN 38 AA 1001', time: '09:42 AM', weight: '3.2 T', status: 'completed', type: 'C&D Waste', duration: '18 min' },
+    { id: 'COL-2402', site: 'Gandhipuram Collection Pt', driver: 'Karthik S.', truck: 'TN 38 BB 2002', time: '10:15 AM', weight: '2.8 T', status: 'completed', type: 'Mixed Debris', duration: '22 min' },
+    { id: 'COL-2403', site: 'Saravanampatti IT Zone', driver: 'Selvam P.', truck: 'TN 38 CC 3003', time: '11:00 AM', weight: '—', status: 'in-transit', type: 'C&D Waste', duration: '—' },
+    { id: 'COL-2404', site: 'Singanallur Depot', driver: 'Rajan K.', truck: 'TN 38 DD 4004', time: '11:30 AM', weight: '—', status: 'pending', type: 'Mixed Waste', duration: '—' },
+    { id: 'COL-2405', site: 'Ondipudur Gate', driver: 'Unassigned', truck: '—', time: '08:20 AM', weight: '—', status: 'missed', type: 'C&D Waste', duration: '—' },
+    { id: 'COL-2406', site: 'Ukkadam Sorting Yard', driver: 'Murugan R.', truck: 'TN 38 AA 1001', time: '08:55 AM', weight: '4.1 T', status: 'completed', type: 'Concrete Rubble', duration: '15 min' },
+    { id: 'COL-2407', site: 'Selvapuram West Site', driver: 'Selvam P.', truck: 'TN 38 CC 3003', time: '12:15 PM', weight: '—', status: 'pending', type: 'C&D Waste', duration: '—' },
+    { id: 'COL-2408', site: 'Kuniyamuthur Hub', driver: 'Karthik S.', truck: 'TN 38 BB 2002', time: '01:30 PM', weight: '—', status: 'pending', type: 'Rubble', duration: '—' },
+    { id: 'COL-2409', site: 'Vadavalli Transfer Stn', driver: 'Rajan K.', truck: 'TN 38 DD 4004', time: '07:30 AM', weight: '3.0 T', status: 'completed', type: 'C&D Waste', duration: '20 min' },
+    { id: 'COL-2410', site: 'Thudiyalur Site', driver: 'Unassigned', truck: '—', time: '09:00 AM', weight: '—', status: 'missed', type: 'Mixed Debris', duration: '—' },
 ]
 
 const statusConfig = {

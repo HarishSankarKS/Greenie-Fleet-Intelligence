@@ -9,7 +9,6 @@ import Analytics from './pages/Analytics'
 import Vehicles from './pages/Vehicles'
 import Drivers from './pages/Drivers'
 import Maintenance from './pages/Maintenance'
-import Subscriptions from './pages/Subscriptions'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import ClientDashboard from './pages/portal/ClientDashboard'
@@ -68,7 +67,6 @@ export default function App() {
                   <Route path="/vehicles" element={<Vehicles />} />
                   <Route path="/drivers" element={<Drivers />} />
                   <Route path="/maintenance" element={<Maintenance />} />
-                  <Route path="/subscriptions" element={<Subscriptions />} />
                   <Route path="/settings" element={<Settings />} />
                 </Routes>
               </main>
