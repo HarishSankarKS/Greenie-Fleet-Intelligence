@@ -10,6 +10,7 @@ import Vehicles from './pages/Vehicles'
 import Drivers from './pages/Drivers'
 import Maintenance from './pages/Maintenance'
 import Settings from './pages/Settings'
+import Marketplace from './pages/Marketplace'
 import Login from './pages/Login'
 import ClientDashboard from './pages/portal/ClientDashboard'
 import ClientLiveMap from './pages/portal/ClientLiveMap'
@@ -68,6 +69,7 @@ export default function App() {
                   <Route path="/drivers" element={<Drivers />} />
                   <Route path="/maintenance" element={<Maintenance />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/marketplace" element={<Marketplace />} />
                 </Routes>
               </main>
             </div>

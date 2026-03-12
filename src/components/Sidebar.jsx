@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
     LayoutDashboard, MapPin, Map, BarChart3, Truck, Users,
-    Wrench, Settings
+    Wrench, Settings, ShoppingBag
 } from 'lucide-react'
 
 const navItems = [
@@ -18,6 +18,11 @@ const navItems = [
             { to: '/vehicles', icon: Truck, label: 'Vehicles' },
             { to: '/drivers', icon: Users, label: 'Drivers' },
             { to: '/maintenance', icon: Wrench, label: 'Maintenance' },
+        ]
+    },
+    {
+        group: 'Commerce', items: [
+            { to: '/marketplace', icon: ShoppingBag, label: 'Waste Marketplace' },
         ]
     },
     {
