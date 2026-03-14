@@ -11,6 +11,7 @@ import Drivers from './pages/Drivers'
 import Maintenance from './pages/Maintenance'
 import Settings from './pages/Settings'
 import Marketplace from './pages/Marketplace'
+import MarketplaceAnalytics from './pages/MarketplaceAnalytics'
 import Login from './pages/Login'
 import ClientDashboard from './pages/portal/ClientDashboard'
 import ClientLiveMap from './pages/portal/ClientLiveMap'
@@ -70,6 +71,7 @@ export default function App() {
                   <Route path="/maintenance" element={<Maintenance />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/marketplace" element={<Marketplace />} />
+                  <Route path="/marketplace-analytics" element={<MarketplaceAnalytics />} />
                 </Routes>
               </main>
             </div>
