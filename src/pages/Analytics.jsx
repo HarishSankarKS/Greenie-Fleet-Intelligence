@@ -28,12 +28,10 @@ const wasteByType = [
 ]
 
 const sitePerf = [
-    { site: 'RS Puram C&D Site', efficiency: 94, collections: 78 },
-    { site: 'Gandhipuram Collection Pt', efficiency: 87, collections: 92 },
-    { site: 'Saravanampatti IT Zone', efficiency: 91, collections: 105 },
-    { site: 'Singanallur Depot', efficiency: 76, collections: 54 },
-    { site: 'Ukkadam Sorting Yard', efficiency: 93, collections: 89 },
-    { site: 'Ondipudur Gate', efficiency: 85, collections: 68 },
+    { site: 'North TS — Thudiyalur',    color: '#1a3263', zone: 'North', efficiency: 96, collections: 148, turnaround: '2.8d' },
+    { site: 'South TS — Singanallur',   color: '#0f766e', zone: 'South', efficiency: 91, collections: 182, turnaround: '3.1d' },
+    { site: 'East TS — Irugur',         color: '#c8a951', zone: 'East',  efficiency: 94, collections: 160, turnaround: '2.4d' },
+    { site: 'West TS — Kuniyamuthur',   color: '#6b7280', zone: 'West',  efficiency: 82, collections: 62,  turnaround: '3.8d' },
 ]
 
 // ─── EPR Data ─────────────────────────────────────────────────────────────────
@@ -51,12 +49,10 @@ const EPR_MILESTONES = [
 
 // EPR certificate data per station
 const STATION_EPR = [
-    { siteId: 'CBE-01', site: 'RS Puram C&D Site',         recycled: 62,  total: 280, certNo: 'GRN-EPR-2026-001' },
-    { siteId: 'CBE-02', site: 'Gandhipuram Collection Pt', recycled: 53,  total: 310, certNo: 'GRN-EPR-2026-002' },
-    { siteId: 'CBE-03', site: 'Ukkadam Sorting Yard',      recycled: 91,  total: 400, certNo: 'GRN-EPR-2026-003' },
-    { siteId: 'CBE-04', site: 'Saravanampatti IT Zone',    recycled: 72,  total: 290, certNo: 'GRN-EPR-2026-004' },
-    { siteId: 'CBE-05', site: 'Singanallur Depot',         recycled: 48,  total: 260, certNo: 'GRN-EPR-2026-005' },
-    { siteId: 'CBE-07', site: 'Kuniyamuthur Hub',          recycled: 29,  total: 200, certNo: 'GRN-EPR-2026-006' },
+    { siteId: 'TS-N', site: 'North Transfer Station — Thudiyalur',   color: '#1a3263', recycled: 142, total: 550, certNo: 'GRN-EPR-2026-TS-N' },
+    { siteId: 'TS-S', site: 'South Transfer Station — Singanallur',  color: '#0f766e', recycled: 178, total: 640, certNo: 'GRN-EPR-2026-TS-S' },
+    { siteId: 'TS-E', site: 'East Transfer Station — Irugur',        color: '#c8a951', recycled: 156, total: 500, certNo: 'GRN-EPR-2026-TS-E' },
+    { siteId: 'TS-W', site: 'West Transfer Station — Kuniyamuthur',  color: '#6b7280', recycled: 58,  total: 280, certNo: 'GRN-EPR-2026-TS-W' },
 ]
 
 // Voluntary carbon credit rate (₹/tonne CO₂ avoided — C&D diversion factor ~0.42 t CO₂/t waste)
@@ -278,27 +274,36 @@ export default function Analytics() {
                 </div>
             </div>
 
-            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="card" style={{ marginBottom: 24 }}>
                 <div className="card-header">
-                    <span className="card-title">Site Performance Comparison</span>
+                    <span className="card-title">Transfer Station Performance Comparison</span>
                     <button className="btn btn-outline btn-sm"><Download size={13} /> Export CSV</button>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>Site Name</th>
-                                <th>Total Collections</th>
+                                <th>Transfer Station</th>
+                                <th>Zone</th>
+                                <th>Total Pickups (T)</th>
                                 <th>Efficiency Score</th>
+                                <th>Avg Turnaround</th>
                                 <th>Performance</th>
                             </tr>
                         </thead>
                         <tbody>
                             {sitePerf.map(row => (
                                 <tr key={row.site}>
-                                    <td style={{ fontWeight: 500 }}>{row.site}</td>
-                                    <td>{row.collections}</td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: row.color, display: 'inline-block', flexShrink: 0 }} />
+                                            <span style={{ fontWeight: 600 }}>{row.site}</span>
+                                        </div>
+                                    </td>
+                                    <td><span style={{ fontSize: 11.5, fontWeight: 700, color: row.color }}>{row.zone}</span></td>
+                                    <td style={{ fontWeight: 700 }}>{row.collections}T</td>
                                     <td>{row.efficiency}%</td>
+                                    <td><span style={{ fontSize: 12, fontWeight: 700, color: parseFloat(row.turnaround) < 3 ? '#10b981' : parseFloat(row.turnaround) < 4 ? '#f59e0b' : '#ef4444' }}>{row.turnaround}</span></td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                             <div style={{ flex: 1, height: 8, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
