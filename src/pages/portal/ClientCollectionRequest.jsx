@@ -158,12 +158,12 @@ const RATES = {
 export default function ClientCollectionRequest() {
     const [step, setStep] = useState(1)
     const [form, setForm] = useState({
-        site: '', customAddr: '', wasteType: 'C&D Waste', estWeight: '',
+        site: '', customAddr: '', wasteType: 'Concrete Rubble', estWeight: '',
         date: '', time: 'morning', notes: '', urgent: false,
     })
     const [submitted, setSubmitted] = useState(null)
 
-    const rateInfo = RATES[form.wasteType] || RATES['C&D Waste']
+    const rateInfo = RATES[form.wasteType] || RATES['Mixed C&D Debris']
     const baseRate = rateInfo.rate
     const urgentMultiplier = form.urgent ? 1.2 : 1
     const subtotal = form.estWeight ? parseFloat(form.estWeight) * baseRate * urgentMultiplier : 0
@@ -209,7 +209,7 @@ export default function ClientCollectionRequest() {
                         >
                             <Download size={14} /> Download Receipt PDF
                         </button>
-                        <button onClick={() => { setSubmitted(null); setStep(1); setForm({ site: '', customAddr: '', wasteType: 'C&D Waste', estWeight: '', date: '', time: 'morning', notes: '', urgent: false }) }}
+                        <button onClick={() => { setSubmitted(null);         setStep(1); setForm({ site: '', customAddr: '', wasteType: 'Concrete Rubble', estWeight: '', date: '', time: 'morning', notes: '', urgent: false }) }}
                             style={{ padding: '10px 20px', background: '#1a3263', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                             New Request
                         </button>
