@@ -2,8 +2,119 @@ import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Filter, RefreshCw, Cpu, Zap, TrendingUp, Radio } from 'lucide-react'
-import { useDRLRoutes, SITES, TRUCKS, TRUCK_COLORS } from '../utils/drlCVRP'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { Filter, RefreshCw, Cpu, Zap, TrendingUp, Radio, FileText } from 'lucide-react'
+import { useDRLRoutes, SITES, TRUCKS, TRUCK_COLORS, TRANSFER_STATIONS } from '../utils/drlCVRP'
+
+// ─── Digital Manifest PDF ─────────────────────────────────────────────────────
+function generateManifest(route) {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const today = new Date()
+    const dateStr = today.toISOString().slice(0, 10)
+    const timeStr = today.toLocaleTimeString('en-IN', { hour12: false })
+    const manifestNo = `GRN-MFT-${dateStr.replace(/-/g, '')}-${route.truck.id}`
+
+    // Header
+    doc.setFillColor(26, 50, 99)
+    doc.rect(0, 0, pageW, 40, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(255, 255, 255)
+    doc.text('GREENIE', 14, 16)
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 200, 255)
+    doc.text('Fleet & Waste Intelligence · C&D Waste Division', 14, 23)
+    doc.text('Coimbatore, Tamil Nadu · GSTIN: 33AABCG1234A1Z5', 14, 29)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255)
+    doc.text('DIGITAL COLLECTION MANIFEST', pageW - 14, 15, { align: 'right' })
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 200, 255)
+    doc.text(`Manifest No: ${manifestNo}`, pageW - 14, 22, { align: 'right' })
+    doc.text(`Date: ${dateStr}  Time: ${timeStr}`, pageW - 14, 28, { align: 'right' })
+    doc.text('C&D Waste Management Rules 2016 compliant', pageW - 14, 34, { align: 'right' })
+
+    // Gold rule
+    doc.setDrawColor(200, 169, 81); doc.setLineWidth(0.5); doc.line(14, 45, pageW - 14, 45)
+
+    // Vehicle + Driver
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(26, 50, 99)
+    doc.text('VEHICLE & DRIVER DETAILS', 14, 54)
+    const vehDetails = [
+        ['Vehicle Reg. No.', route.truck.plate],
+        ['Driver Name', route.truck.driver],
+        ['Truck ID', route.truck.id],
+        ['Capacity', `${route.truck.capacity} T`],
+        ['Route Load', `${route.totalLoad} T (${route.utilisation}% utilised)`],
+        ['DRL ETA (from depot)', route.eta],
+        ['Est. Distance', `${(route.totalDistM / 1000).toFixed(1)} km`],
+        ['Est. Duration', `${Math.round(route.totalTimeSec / 60)} min`],
+    ]
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+    let dy = 63
+    vehDetails.forEach(([label, val]) => {
+        doc.setFont('helvetica', 'bold'); doc.text(`${label}:`, 14, dy)
+        doc.setFont('helvetica', 'normal'); doc.text(String(val), 80, dy)
+        dy += 7
+    })
+
+    // Collection sites table
+    doc.setDrawColor(220, 220, 220); doc.setLineWidth(0.2); doc.line(14, dy + 3, pageW - 14, dy + 3)
+    autoTable(doc, {
+        startY: dy + 7,
+        head: [['#', 'Site ID', 'Site Name', 'Type', 'Waste (T)']],
+        body: route.assignedSites.map((s, i) => [
+            i + 1,
+            s.id,
+            s.name,
+            s.type,
+            s.demand,
+        ]),
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [26, 50, 99], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        alternateRowStyles: { fillColor: [245, 248, 252] },
+        margin: { left: 14, right: 14 },
+    })
+
+    const afterTable = doc.lastAutoTable.finalY + 10
+
+    // Route sequence
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 50, 99)
+    doc.text('OPTIMISED ROUTE SEQUENCE (DRL-CVRP)', 14, afterTable)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); doc.setFontSize(8.5)
+    doc.text(
+        `Depot → ${route.assignedSites.map(s => s.id).join(' → ')} → Depot`,
+        14, afterTable + 8
+    )
+    doc.text(
+        `Route optimised via Deep Reinforcement Learning (GNN + PPO + 2-opt). Traffic data: TomTom Flow API.`,
+        14, afterTable + 16
+    )
+
+    // Declaration
+    const decY = afterTable + 28
+    doc.setFillColor(240, 245, 255); doc.roundedRect(14, decY, pageW - 28, 26, 2, 2, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(26, 50, 99)
+    doc.text('GENERATOR DECLARATION', 20, decY + 8)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40)
+    doc.text('This manifest is electronically generated and certifies that the C&D waste listed above has been', 20, decY + 15)
+    doc.text('collected and is being transported to an authorised recycling facility in compliance with CPCB norms.', 20, decY + 21)
+
+    // Signature line
+    const sigY = decY + 38
+    doc.setDrawColor(180, 180, 180); doc.line(14, sigY, 80, sigY)
+    doc.line(pageW - 80, sigY, pageW - 14, sigY)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100)
+    doc.text('Authorised Driver Signature', 14, sigY + 5)
+    doc.text('GREENIE Ops Officer', pageW - 14, sigY + 5, { align: 'right' })
+
+    // Footer
+    doc.setFillColor(240, 245, 255); doc.rect(0, 280, pageW, 17, 'F')
+    doc.setFontSize(7.5); doc.setTextColor(100, 100, 100)
+    doc.text(
+        `${manifestNo} · Generated: ${dateStr} ${timeStr} · Greenie Fleet Intelligence Pvt Ltd · ops@greenie.ac.in`,
+        pageW / 2, 289, { align: 'center' }
+    )
+
+    doc.output('save', `${manifestNo}.pdf`)
+}
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -12,12 +123,27 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+// Construction/demolition site marker (orange-red)
 const siteIcon = (status) => L.divIcon({
     className: '',
-    html: `<div style="width:20px;height:20px;border-radius:50%;
-    background:${status === 'active' ? '#10b981' : status === 'idle' ? '#f59e0b' : '#ef4444'};
-    border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
-    iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -14],
+    html: `<div style="width:18px;height:18px;border-radius:4px;
+    background:${status === 'active' ? '#f59e0b' : status === 'idle' ? '#94a3b8' : '#ef4444'};
+    border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);transform:rotate(45deg)"></div>`,
+    iconSize: [18, 18], iconAnchor: [9, 9], popupAnchor: [0, -14],
+})
+
+// Transfer station marker — large gold hub star
+const transferStationIcon = (color) => L.divIcon({
+    className: '',
+    html: `<div style="
+        width:28px;height:28px;border-radius:50%;
+        background:${color || '#c8a951'};
+        border:3px solid white;
+        box-shadow:0 3px 12px rgba(0,0,0,0.4);
+        display:flex;align-items:center;justify-content:center;
+        font-size:14px;line-height:1
+    ">🏭</div>`,
+    iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -18],
 })
 
 const trafficIcon = (congestion) => L.divIcon({
@@ -79,7 +205,7 @@ export default function Monitoring() {
                 <div>
                     <div className="page-title">Monitoring / DRL Route Optimisation</div>
                     <div className="page-subtitle">
-                        Hybrid DRL-CVRP with live Coimbatore traffic · {SITES.length} sites · {TRUCKS.length} trucks
+                        Hybrid DRL-CVRP · {SITES.length} C&D sites · 4 transfer stations · {TRUCKS.length} trucks · Live Coimbatore traffic
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -196,12 +322,25 @@ export default function Monitoring() {
                             {filtered.map(s => (
                                 <Marker key={s.id} position={[s.lat, s.lng]} icon={siteIcon(s.status)}>
                                     <Popup>
-                                        <div style={{ minWidth: 150, fontFamily: 'Inter,sans-serif' }}>
+                                        <div style={{ minWidth: 160, fontFamily: 'Inter,sans-serif' }}>
                                             <strong>{s.name}</strong><br />
-                                            <span style={{ fontSize: 12, color: '#555' }}>{s.type} · {s.demand}T</span><br />
+                                            <span style={{ fontSize: 11.5, color: '#f59e0b', fontWeight: 600 }}>🚧 {s.activity || 'C&D Site'}</span><br />
+                                            <span style={{ fontSize: 11.5, color: '#555' }}>{s.type} · {s.demand}T · Ward {s.ward}</span><br />
                                             {s.truckColor !== '#6b7280' && (
-                                                <span style={{ fontSize: 11, color: s.truckColor, fontWeight: 600 }}>● Assigned</span>
+                                                <span style={{ fontSize: 11, color: s.truckColor, fontWeight: 600 }}>● Truck assigned</span>
                                             )}
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            ))}
+                            {/* Transfer Station hub markers */}
+                            {TRANSFER_STATIONS.map(ts => (
+                                <Marker key={ts.id} position={[ts.lat, ts.lng]} icon={transferStationIcon(ts.color)}>
+                                    <Popup>
+                                        <div style={{ minWidth: 180, fontFamily: 'Inter,sans-serif' }}>
+                                            <strong style={{ color: ts.color }}>{ts.name}</strong><br />
+                                            <span style={{ fontSize: 11.5, color: '#333' }}>📍 {ts.area}</span><br />
+                                            <span style={{ fontSize: 11.5, color: '#555' }}>Capacity: {ts.capacity}T · Zone: {ts.zone}</span>
                                         </div>
                                     </Popup>
                                 </Marker>
@@ -298,10 +437,23 @@ export default function Monitoring() {
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                                     <span style={{ fontWeight: 700, fontSize: 13.5, color: '#1a1a2e' }}>{r.truck.plate}</span>
-                                    <span style={{
-                                        fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10,
-                                        background: r.color + '18', color: r.color,
-                                    }}>{r.utilisation}% load</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{
+                                            fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 10,
+                                            background: r.color + '18', color: r.color,
+                                        }}>{r.utilisation}% load</span>
+                                        <button
+                                            onClick={() => generateManifest(r)}
+                                            style={{
+                                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                                                padding: '3px 9px', fontSize: 11, fontWeight: 600,
+                                                background: '#eff6ff', color: '#1e40af',
+                                                border: '1px solid #bfdbfe', borderRadius: 6, cursor: 'pointer',
+                                            }}
+                                        >
+                                            <FileText size={11} /> Manifest
+                                        </button>
+                                    </div>
                                 </div>
                                 <div style={{ fontSize: 12, color: '#5a6478', marginBottom: 2 }}>
                                     {r.truck.driver} · {r.totalLoad}T / {r.truck.capacity}T
@@ -322,8 +474,8 @@ export default function Monitoring() {
                 {/* Collection Sites — 2-col inner grid */}
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                     <div className="card-header">
-                        <span className="card-title">Collection Sites</span>
-                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{filtered.length} sites</span>
+                        <span className="card-title">C&D Pickup Sites</span>
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{filtered.length} sites · collecting today</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                         {filtered.map((s, i) => (
@@ -331,15 +483,23 @@ export default function Monitoring() {
                                 padding: '11px 14px',
                                 borderBottom: '1px solid #f5f6f8',
                                 borderRight: i % 2 === 0 ? '1px solid #f5f6f8' : 'none',
+                                background: s.status === 'active' ? '#fffdf0' : 'transparent',
                             }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4 }}>
-                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e', lineHeight: 1.3 }}>{s.name}</div>
+                                    <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.3 }}>{s.name}</div>
                                     <span style={{
-                                        fontSize: 9.5, fontWeight: 700, color: s.truckColor,
-                                        background: s.truckColor + '18', padding: '1px 6px', borderRadius: 5, flexShrink: 0,
+                                        fontSize: 9.5, fontWeight: 700, color: s.status === 'active' ? '#f59e0b' : '#94a3b8',
+                                        background: (s.status === 'active' ? '#f59e0b' : '#94a3b8') + '18',
+                                        padding: '1px 6px', borderRadius: 5, flexShrink: 0,
                                     }}>{s.id}</span>
                                 </div>
-                                <div style={{ fontSize: 10.5, color: '#8899aa', marginTop: 3 }}>{s.type} · {s.demand}T</div>
+                                <div style={{ fontSize: 10.5, color: '#f59e0b', fontWeight: 600, marginTop: 2 }}>
+                                    {s.activity ? `🚧 ${s.activity}` : 'C&D Site'}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: '#8899aa', marginTop: 2 }}>
+                                    <span>Ward {s.ward} · {s.zone} Zone</span>
+                                    <span style={{ color: s.truckColor, fontWeight: 600 }}>{s.demand}T · {s.status === 'active' ? 'En route' : 'Queued'}</span>
+                                </div>
                             </div>
                         ))}
                     </div>

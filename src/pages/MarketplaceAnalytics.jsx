@@ -7,7 +7,7 @@ import {
 import {
     TrendingUp, IndianRupee, FileText, Package, Edit2, X,
     AlertTriangle, CheckCircle, Lock, Zap, BarChart2, Clock,
-    Download, ShieldCheck
+    Download, ShieldCheck, ArrowDownToLine, ArrowUpFromLine
 } from 'lucide-react'
 import {
     revenueByMaterial, revenueByZone, gmvTrend, GMV_MONTHLY_TARGET,
@@ -78,8 +78,97 @@ function RevenueTab() {
     const revenueChange = (((summaryKPIs.revenueThisMonth - summaryKPIs.revenueLastMonth) / summaryKPIs.revenueLastMonth) * 100).toFixed(1)
     const gmvPct = ((summaryKPIs.gmvAllTime / 2500000) * 100).toFixed(1)
 
+    // Calculated revenue split (tipping fee + material sales)
+    const tippingRev = 142800
+    const materialRev = summaryKPIs.revenueThisMonth - tippingRev
+    const totalRev = summaryKPIs.revenueThisMonth
+    const tipPct = totalRev > 0 ? ((tippingRev / totalRev) * 100).toFixed(0) : 0
+    const matPct = totalRev > 0 ? (100 - tipPct) : 0
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+            {/* ── Revenue Split Banner + Donut Chart ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 16, alignItems: 'stretch' }}>
+                {/* Split Banner */}
+                <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0,
+                    borderRadius: 12, overflow: 'hidden', border: '1.5px solid #e5e9f0',
+                }}>
+                    {/* Tipping Inbound */}
+                    <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', padding: '18px 22px', borderRight: '1px solid #bbf7d0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <ArrowDownToLine size={16} color="#166534" />
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tipping Revenue — Inbound</span>
+                            <span style={{ fontSize: 10.5, background: '#bbf7d0', color: '#166534', borderRadius: 20, padding: '1px 8px', fontWeight: 700 }}>GRN-TIP</span>
+                        </div>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: '#166534' }}>{formatCurrency(tippingRev, true)}</div>
+                        <div style={{ fontSize: 12, color: '#166534', opacity: 0.75, marginTop: 4 }}>
+                            {tipPct}% of total · ₹400/T avg · Contractors pay Greenie
+                        </div>
+                        <div style={{ marginTop: 10, height: 6, background: '#bbf7d0', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ width: `${tipPct}%`, height: '100%', background: 'linear-gradient(90deg,#16a34a,#22c55e)', borderRadius: 4 }} />
+                        </div>
+                    </div>
+                    {/* Material Sales Outbound */}
+                    <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', padding: '18px 22px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <ArrowUpFromLine size={16} color="#1e40af" />
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Material Sales — Outbound</span>
+                            <span style={{ fontSize: 10.5, background: '#bfdbfe', color: '#1e40af', borderRadius: 20, padding: '1px 8px', fontWeight: 700 }}>GRN-INV</span>
+                        </div>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: '#1e40af' }}>{formatCurrency(materialRev, true)}</div>
+                        <div style={{ fontSize: 12, color: '#1e40af', opacity: 0.75, marginTop: 4 }}>
+                            {matPct}% of total · Recycled materials sold to builders
+                        </div>
+                        <div style={{ marginTop: 10, height: 6, background: '#bfdbfe', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ width: `${matPct}%`, height: '100%', background: 'linear-gradient(90deg,#2563eb,#60a5fa)', borderRadius: 4 }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Revenue Composition Donut */}
+                <div style={{ background: '#fff', borderRadius: 12, border: '1.5px solid #e5e9f0', padding: '18px 20px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 6 }}>Revenue Composition</div>
+                    <div style={{ fontSize: 11.5, color: '#5a6478', marginBottom: 12 }}>Three Greenie revenue streams · This month</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1 }}>
+                        <ResponsiveContainer width={160} height={160}>
+                            <PieChart>
+                                <Pie
+                                    data={[
+                                        { name: 'Tipping Fees', value: tippingRev, pct: tipPct },
+                                        { name: 'Material Sales', value: materialRev, pct: matPct },
+                                        { name: 'EPR Credits', value: Math.round(totalRev * 0.04), pct: 4 },
+                                    ]}
+                                    cx="50%" cy="50%" innerRadius={46} outerRadius={70}
+                                    dataKey="value" paddingAngle={3}
+                                >
+                                    <Cell fill="#16a34a" />
+                                    <Cell fill="#2563eb" />
+                                    <Cell fill="#c8a951" />
+                                </Pie>
+                                <Tooltip formatter={(v) => `₹${v.toLocaleString('en-IN')}`} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+                            {[
+                                { label: 'Tipping Fees',   pct: tipPct, val: tippingRev,                      color: '#16a34a', bg: '#f0fdf4' },
+                                { label: 'Material Sales', pct: matPct, val: materialRev,                     color: '#2563eb', bg: '#eff6ff' },
+                                { label: 'EPR Credits',    pct: 4,      val: Math.round(totalRev * 0.04),    color: '#c8a951', bg: '#fffbeb' },
+                            ].map(s => (
+                                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <div style={{ width: 10, height: 10, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 600, color: '#1a1a2e' }}>{s.label}</div>
+                                        <div style={{ fontSize: 10.5, color: '#5a6478' }}>₹{s.val.toLocaleString('en-IN')} · {s.pct}%</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* KPI Strip */}
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
                 {[
@@ -217,6 +306,70 @@ function RevenueTab() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Transfer Station Performance ── */}
+            <div className="card" style={{ marginTop: 8 }}>
+                <div className="card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="card-title">Transfer Station Performance</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 20, padding: '2px 8px' }}>Billing &middot; Intake &middot; Utilisation</span>
+                    </div>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>March 2026</span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Station</th>
+                                <th>Zone</th>
+                                <th>Intake (T)</th>
+                                <th>Capacity Used</th>
+                                <th>Tipping Revenue</th>
+                                <th>Material Sales</th>
+                                <th>Total Revenue</th>
+                                <th>Invoices Raised</th>
+                                <th>Avg Turnaround</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[
+                                { id: 'TS-N', name: 'North TS \u2014 Thudiyalur',  zone: 'North', color: '#1a3263', intake: 148, cap: 150, tipRev: 38800,  matRev: 84200,  invoices: 14, turnaround: '2.8d' },
+                                { id: 'TS-S', name: 'South TS \u2014 Singanallur', zone: 'South', color: '#0f766e', intake: 182, cap: 200, tipRev: 52400,  matRev: 121600, invoices: 21, turnaround: '3.1d' },
+                                { id: 'TS-E', name: 'East TS \u2014 Irugur',       zone: 'East',  color: '#c8a951', intake: 160, cap: 180, tipRev: 44000,  matRev: 98800,  invoices: 18, turnaround: '2.4d' },
+                                { id: 'TS-W', name: 'West TS \u2014 Kuniyamuthur', zone: 'West',  color: '#6b7280', intake: 62,  cap: 120, tipRev: 19200,  matRev: 32400,  invoices: 9,  turnaround: '3.8d' },
+                            ].map(ts => {
+                                const pct = Math.round((ts.intake / ts.cap) * 100)
+                                const total = ts.tipRev + ts.matRev
+                                return (
+                                    <tr key={ts.id}>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span style={{ width: 10, height: 10, borderRadius: '50%', background: ts.color, display: 'inline-block', flexShrink: 0 }} />
+                                                <span style={{ fontWeight: 600, fontSize: 12.5 }}>{ts.name}</span>
+                                            </div>
+                                        </td>
+                                        <td><span style={{ fontSize: 11.5, fontWeight: 700, color: ts.color }}>{ts.zone}</span></td>
+                                        <td style={{ fontWeight: 700 }}>{ts.intake}T</td>
+                                        <td style={{ minWidth: 140 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <div style={{ flex: 1, height: 6, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden', minWidth: 60 }}>
+                                                    <div style={{ width: `${pct}%`, height: '100%', background: pct > 85 ? '#ef4444' : ts.color, borderRadius: 3 }} />
+                                                </div>
+                                                <span style={{ fontSize: 11.5, fontWeight: 700, color: pct > 85 ? '#ef4444' : 'var(--color-text-muted)' }}>{pct}%</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ color: '#166534', fontWeight: 600 }}>{formatCurrency(ts.tipRev, true)}</td>
+                                        <td style={{ color: '#1a3263', fontWeight: 600 }}>{formatCurrency(ts.matRev, true)}</td>
+                                        <td style={{ fontWeight: 800 }}>{formatCurrency(total, true)}</td>
+                                        <td style={{ textAlign: 'center', fontWeight: 600 }}>{ts.invoices}</td>
+                                        <td><span style={{ fontSize: 12, fontWeight: 700, color: parseFloat(ts.turnaround) < 3 ? '#10b981' : parseFloat(ts.turnaround) < 4 ? '#f59e0b' : '#ef4444' }}>{ts.turnaround}</span></td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     )
 }
@@ -257,7 +410,7 @@ function InventoryTab() {
             {/* Sub-KPIs */}
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
                 {[
-                    { label: 'Total Stock Available', value: `${initialInventory.reduce((s, site) => s + site.materials.reduce((m, mat) => m + mat.availableTonnes, 0), 0).toFixed(1)} T`, color: 'teal', icon: Package, sub: 'across all sites' },
+                    { label: 'Total Stock Available', value: `${initialInventory.reduce((s, site) => s + site.materials.reduce((m, mat) => m + mat.availableTonnes, 0), 0).toFixed(1)} T`, color: 'teal', icon: Package, sub: 'across 4 transfer stations' },
                     { label: 'Pending Batches',        value: summaryKPIs.pendingBatches, color: 'amber', icon: Clock, sub: 'awaiting admin publish' },
                     { label: 'Sold This Month',         value: `${summaryKPIs.soldTonnesThisMonth} T`, color: 'green', icon: TrendingUp, sub: 'total offloaded' },
                     {

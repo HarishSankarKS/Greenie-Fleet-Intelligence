@@ -11,12 +11,12 @@ export const revenueByMaterial = [
     { month: 'Mar', 'Concrete Rubble': 97000,  Steel: 286000, Brick: 41000, Timber: 18800, Plastic: 9200,  Glass: 6400  },
 ]
 
-// ── Revenue by Zone ───────────────────────────────────────────────────────────
+// ── Revenue by Transfer Station Zone ─────────────────────────────────────────
 export const revenueByZone = [
-    { zone: 'North Station', value: 184000, color: '#1a3263' },
-    { zone: 'South Station', value: 236000, color: '#0f766e' },
-    { zone: 'East Station',  value: 158000, color: '#c8a951' },
-    { zone: 'West Station',  value: 127000, color: '#6b7280' },
+    { zone: 'North TS — Thudiyalur',   value: 184000, color: '#1a3263' },
+    { zone: 'South TS — Singanallur',  value: 236000, color: '#0f766e' },
+    { zone: 'East TS — Irugur',        value: 158000, color: '#c8a951' },
+    { zone: 'West TS — Kuniyamuthur',  value: 127000, color: '#6b7280' },
 ]
 
 // ── Monthly GMV Trend ─────────────────────────────────────────────────────────

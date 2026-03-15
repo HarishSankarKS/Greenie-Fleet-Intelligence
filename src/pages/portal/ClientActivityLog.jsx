@@ -1,5 +1,70 @@
 import { useState } from 'react'
-import { Search, Download, Filter, ChevronDown, MapPin, Clock, Truck, AlertTriangle, CheckCircle, XCircle, ArrowUpDown } from 'lucide-react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { Search, Download, Filter, ChevronDown, MapPin, Clock, Truck, AlertTriangle, CheckCircle, XCircle, FileText } from 'lucide-react'
+
+// ─── Collection Manifest PDF ────────────────────────────────────────────────────────────────────
+function generateCollectionManifest(row) {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const today = new Date().toISOString().slice(0, 10)
+    const manifestNo = `GRN-MFT-${row.id}`
+
+    // Header
+    doc.setFillColor(26, 50, 99)
+    doc.rect(0, 0, pageW, 40, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(255, 255, 255)
+    doc.text('GREENIE', 14, 16)
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 200, 255)
+    doc.text('Fleet & Waste Intelligence · Client Portal', 14, 23)
+    doc.text('Coimbatore, Tamil Nadu · GSTIN: 33AABCG1234A1Z5', 14, 29)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255)
+    doc.text('COLLECTION MANIFEST', pageW - 14, 16, { align: 'right' })
+    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(180, 200, 255)
+    doc.text(`Manifest No: ${manifestNo}`, pageW - 14, 23, { align: 'right' })
+    doc.text(`Date: ${today}`, pageW - 14, 29, { align: 'right' })
+
+    doc.setDrawColor(200, 169, 81); doc.setLineWidth(0.5); doc.line(14, 45, pageW - 14, 45)
+
+    // Manifest details table
+    autoTable(doc, {
+        startY: 52,
+        head: [['Field', 'Value']],
+        body: [
+            ['Collection ID', row.id],
+            ['Collection Site', row.site],
+            ['Driver', row.driver],
+            ['Vehicle', row.truck],
+            ['Collection Time', row.time],
+            ['Weight Collected', row.weight],
+            ['Waste Type', row.type],
+            ['Duration', row.duration],
+            ['Status', 'Completed'],
+        ],
+        styles: { fontSize: 10, cellPadding: 5 },
+        headStyles: { fillColor: [26, 50, 99], textColor: 255, fontStyle: 'bold', fontSize: 9.5 },
+        alternateRowStyles: { fillColor: [245, 248, 252] },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+        margin: { left: 14, right: 14 },
+    })
+
+    const afterTable = doc.lastAutoTable.finalY + 14
+
+    // Declaration block
+    doc.setFillColor(240, 245, 255); doc.roundedRect(14, afterTable, pageW - 28, 30, 2, 2, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(26, 50, 99)
+    doc.text('DECLARATION', 20, afterTable + 9)
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40)
+    doc.text('This electronically generated manifest certifies that the C&D waste described above was collected', 20, afterTable + 17)
+    doc.text('and transported in compliance with C&D Waste Management Rules 2016 & 2025 CPCB guidelines.', 20, afterTable + 23)
+
+    // Footer
+    doc.setFillColor(240, 245, 255); doc.rect(0, 282, pageW, 15, 'F')
+    doc.setFontSize(7.5); doc.setTextColor(100, 100, 100)
+    doc.text(`${manifestNo} · ${today} · Greenie Fleet Intelligence · ops@greenie.ac.in`, pageW / 2, 289, { align: 'center' })
+
+    doc.output('save', `${manifestNo}.pdf`)
+}
 
 const ACTIVITY_DATA = [
     { id: 'COL-2401', site: 'RS Puram C&D Site', driver: 'Murugan R.', truck: 'TN 38 AA 1001', time: '09:42 AM', weight: '3.2 T', status: 'completed', type: 'C&D Waste', duration: '18 min' },
@@ -112,7 +177,7 @@ export default function ClientActivityLog() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                         <tr style={{ background: '#f8f9fb', borderBottom: '1px solid #e5e9f0' }}>
-                            {['ID', 'Site', 'Driver', 'Truck', 'Time', 'Weight', 'Type', 'Duration', 'Status'].map(h => (
+                            {['ID', 'Site', 'Driver', 'Truck', 'Time', 'Weight', 'Type', 'Duration', 'Status', 'Manifest'].map(h => (
                                 <th key={h} style={{
                                     padding: '10px 14px', textAlign: 'left', fontWeight: 700,
                                     fontSize: 11.5, color: '#5a6478', textTransform: 'uppercase', letterSpacing: '0.04em',
@@ -150,6 +215,21 @@ export default function ClientActivityLog() {
                                         }}>
                                             <Icon size={12} /> {sc.label}
                                         </span>
+                                    </td>
+                                    <td style={{ padding: '10px 14px' }}>
+                                        {r.status === 'completed' && (
+                                            <button
+                                                onClick={() => generateCollectionManifest(r)}
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                                                    padding: '4px 10px', fontSize: 11, fontWeight: 600,
+                                                    background: '#eff6ff', color: '#1e40af',
+                                                    border: '1px solid #bfdbfe', borderRadius: 6, cursor: 'pointer',
+                                                }}
+                                            >
+                                                <FileText size={11} /> Manifest
+                                            </button>
+                                        )}
                                     </td>
                                 </tr>
                             )

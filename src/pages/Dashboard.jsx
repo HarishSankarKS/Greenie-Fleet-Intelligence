@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import {
     Truck, CheckCircle, Clock, AlertTriangle, TrendingUp,
-    Activity, Plus, ArrowUpRight, ArrowDownRight
+    Activity, Plus, ArrowUpRight, ArrowDownRight, Leaf, Wind, IndianRupee
 } from 'lucide-react'
 
 const collectionTrend = [
@@ -124,6 +124,61 @@ export default function Dashboard() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Carbon Impact Card ── */}
+            <div className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1.5px solid #bbf7d0' }}>
+                <div className="card-header" style={{ borderBottom: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #bbf7d0' }}>
+                            <Leaf size={17} color="#166534" />
+                        </div>
+                        <div>
+                            <span className="card-title" style={{ color: '#166534' }}>Today's Carbon Impact</span>
+                            <div style={{ fontSize: 11.5, color: '#166534', opacity: 0.75, marginTop: 1 }}>Based on 61 completed collections · CO₂ diversion factor: 0.42 t CO₂/t waste</div>
+                        </div>
+                    </div>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: '#166534', background: '#dcfce7', padding: '4px 12px', borderRadius: 20, border: '1px solid #bbf7d0' }}>Live · Today</div>
+                </div>
+                <div className="card-body">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                        {[
+                            {
+                                icon: Wind, label: 'CO₂ Diverted Today',
+                                value: `${(61 * 3 * 0.42).toFixed(1)} t`,
+                                sub: '61 jobs × avg 3T × 0.42 factor',
+                                color: '#166534', bg: '#dcfce7', border: '#bbf7d0',
+                            },
+                            {
+                                icon: Leaf, label: 'Tree Equivalent',
+                                value: `${Math.round(61 * 3 * 0.42 * 45)} 🌳`,
+                                sub: '1 tonne CO₂ ≈ 45 trees/year',
+                                color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0',
+                            },
+                            {
+                                icon: IndianRupee, label: 'Carbon Credit Value',
+                                value: `₹${((61 * 3 * 0.42) * 600).toLocaleString('en-IN')}`,
+                                sub: '@ ₹600/t CO₂ (voluntary market)',
+                                color: '#854d0e', bg: '#fefce8', border: '#fde68a',
+                            },
+                            {
+                                icon: TrendingUp, label: 'Monthly Projection',
+                                value: `${(61 * 26 * 3 * 0.42).toFixed(0)} t CO₂`,
+                                sub: 'At today\'s rate × 26 working days',
+                                color: '#1e40af', bg: '#eff6ff', border: '#bfdbfe',
+                            },
+                        ].map(({ icon: Icon, label, value, sub, color, bg, border }) => (
+                            <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '14px 16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                                    <Icon size={14} color={color} />
+                                    <span style={{ fontSize: 11, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+                                </div>
+                                <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 4 }}>{sub}</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

@@ -1,20 +1,31 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { TOMTOM_API_KEY, ORS_API_KEY } from './config'
 
-// ── Coimbatore data ──────────────────────────────────────────────────────────
-export const DEPOT = { id: 'DEPOT', name: 'Peelamedu Depot', lat: 11.0168, lng: 76.9558 }
+// ── Coimbatore operational data ──────────────────────────────────────────────
+export const DEPOT = { id: 'DEPOT', name: 'Greenie Ops Centre — Peelamedu', lat: 11.0168, lng: 76.9558 }
 
+// ── 4 Zonal Transfer Stations (Greenie-owned processing hubs) ─────────────────
+export const TRANSFER_STATIONS = [
+    { id: 'TS-N', name: 'Greenie North Transfer Station', area: 'Thudiyalur',            lat: 11.0630, lng: 76.9693, zone: 'North', capacity: 150, color: '#1a3263' },
+    { id: 'TS-S', name: 'Greenie South Transfer Station', area: 'Singanallur',            lat: 10.9960, lng: 77.0143, zone: 'South', capacity: 200, color: '#0f766e' },
+    { id: 'TS-E', name: 'Greenie East Transfer Station',  area: 'Irugur / Avinashi Rd',  lat: 11.0150, lng: 77.0550, zone: 'East',  capacity: 180, color: '#c8a951' },
+    { id: 'TS-W', name: 'Greenie West Transfer Station',  area: 'Kuniyamuthur',           lat: 10.9683, lng: 76.9459, zone: 'West',  capacity: 120, color: '#6b7280' },
+]
+
+// ── 12 Active C&D / Demolition Collection Sites across Coimbatore ─────────────
 export const SITES = [
-    { id: 'CBE-01', name: 'RS Puram C&D Site', lat: 11.0051, lng: 76.9552, demand: 3.2, type: 'C&D Waste' },
-    { id: 'CBE-02', name: 'Gandhipuram Collection Pt', lat: 11.0168, lng: 76.9674, demand: 2.8, type: 'Mixed Debris' },
-    { id: 'CBE-03', name: 'Ukkadam Sorting Yard', lat: 10.9954, lng: 76.9626, demand: 4.1, type: 'Concrete Rubble' },
-    { id: 'CBE-04', name: 'Saravanampatti IT Zone', lat: 11.0714, lng: 77.0107, demand: 2.5, type: 'C&D Waste' },
-    { id: 'CBE-05', name: 'Singanallur Depot', lat: 10.9960, lng: 77.0143, demand: 3.7, type: 'Mixed Waste' },
-    { id: 'CBE-06', name: 'Selvapuram West Site', lat: 10.9877, lng: 76.9418, demand: 2.1, type: 'C&D Waste' },
-    { id: 'CBE-07', name: 'Kuniyamuthur Hub', lat: 10.9683, lng: 76.9459, demand: 1.8, type: 'Rubble' },
-    { id: 'CBE-08', name: 'Vadavalli Transfer Stn', lat: 11.0125, lng: 76.9136, demand: 3.0, type: 'C&D Waste' },
-    { id: 'CBE-09', name: 'Ondipudur Gate', lat: 10.9854, lng: 77.0480, demand: 2.6, type: 'C&D Waste' },
-    { id: 'CBE-10', name: 'Thudiyalur Site', lat: 11.0630, lng: 76.9693, demand: 1.9, type: 'Mixed Debris' },
+    { id: 'CBE-S01', name: 'RS Puram Old Residential Block',     lat: 11.0051, lng: 76.9552, demand: 3.2, type: 'Concrete Rubble', activity: 'Demolition',    ward: 70,  zone: 'South' },
+    { id: 'CBE-S02', name: 'Gandhipuram Commercial Teardown',    lat: 11.0168, lng: 76.9674, demand: 2.8, type: 'Mixed Debris',    activity: 'Demolition',    ward: 67,  zone: 'North' },
+    { id: 'CBE-S03', name: 'Peelamedu Junction Warehouse Site',  lat: 11.0065, lng: 77.0158, demand: 4.1, type: 'Steel',           activity: 'Demolition',    ward: 36,  zone: 'East'  },
+    { id: 'CBE-S04', name: 'Ramanathapuram Layout Demo',         lat: 10.9950, lng: 76.9980, demand: 2.5, type: 'Brick',           activity: 'Demolition',    ward: 33,  zone: 'South' },
+    { id: 'CBE-S05', name: 'Ondipudur Bypass Road Widening',     lat: 10.9854, lng: 77.0480, demand: 3.7, type: 'Concrete Rubble', activity: 'Road Works',    ward: 29,  zone: 'East'  },
+    { id: 'CBE-S06', name: 'Ganapathy 4th Cross Site',           lat: 11.0240, lng: 76.9820, demand: 2.1, type: 'Mixed Debris',    activity: 'Construction',  ward: 55,  zone: 'North' },
+    { id: 'CBE-S07', name: 'Kovaipudur Hill Access Road',        lat: 10.9560, lng: 76.9320, demand: 1.8, type: 'Concrete Rubble', activity: 'Excavation',    ward: 82,  zone: 'West'  },
+    { id: 'CBE-S08', name: 'Saibaba Colony Junction Demo',       lat: 11.0200, lng: 76.9560, demand: 3.0, type: 'Brick',           activity: 'Demolition',    ward: 69,  zone: 'North' },
+    { id: 'CBE-S09', name: 'Kalapatti IT Corridor',              lat: 11.0550, lng: 77.0250, demand: 2.6, type: 'Concrete Rubble', activity: 'Construction',  ward: 23,  zone: 'East'  },
+    { id: 'CBE-S10', name: 'Podanur Railway-Adjacent Site',      lat: 10.9730, lng: 76.9770, demand: 1.9, type: 'Steel',           activity: 'Demolition',    ward: 90,  zone: 'South' },
+    { id: 'CBE-S11', name: 'Sowripalayam Old Factory',           lat: 10.9990, lng: 76.9730, demand: 2.4, type: 'Steel',           activity: 'Demolition',    ward: 45,  zone: 'South' },
+    { id: 'CBE-S12', name: 'Mettupalayam Rd Flyover Site',       lat: 11.0500, lng: 76.9500, demand: 2.2, type: 'Sand & Aggregate', activity: 'Road Works',   ward: 2,   zone: 'North' },
 ]
 
 export const TRUCKS = [

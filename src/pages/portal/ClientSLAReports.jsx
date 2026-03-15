@@ -20,10 +20,19 @@ const breachLog = [
 ]
 
 const severityConfig = {
-    high: { color: '#ef4444', bg: '#fef2f2' },
+    high:   { color: '#ef4444', bg: '#fef2f2' },
     medium: { color: '#f59e0b', bg: '#fff8e6' },
-    low: { color: '#10b981', bg: '#e8f9f0' },
+    low:    { color: '#10b981', bg: '#e8f9f0' },
 }
+
+const eprMetrics = [
+    { label: 'Recycling Rate',       value: '76.4%',    target: '5%',   status: 'Exceeded', color: '#10b981' },
+    { label: 'C&D Waste Diverted',   value: '953.9 T',  target: '—',    status: 'On Track', color: '#1a3263' },
+    { label: 'Carbon Credits Earned',value: '168.7 t CO₂', target: '—', status: 'Voluntary', color: '#166534' },
+    { label: 'CPCB Reports Due',     value: '14 days',  target: 'Mar 31', status: 'Compliant', color: '#f59e0b' },
+    { label: 'EPR Score',            value: '88/100',   target: '80',   status: 'Above Target', color: '#10b981' },
+    { label: 'Pending Certs',        value: '2',        target: '0',    status: 'In Progress', color: '#f59e0b' },
+]
 
 export default function ClientSLAReports() {
     const [tab, setTab] = useState('overview')
@@ -46,7 +55,7 @@ export default function ClientSLAReports() {
 
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: '#f0f2f5', padding: 4, borderRadius: 10 - 2, width: 'fit-content' }}>
-                {[{ key: 'overview', label: 'Overview' }, { key: 'breaches', label: 'Breach Log' }].map(t => (
+                {[{ key: 'overview', label: 'Overview' }, { key: 'breaches', label: 'Breach Log' }, { key: 'epr', label: '🌿 EPR Compliance' }].map(t => (
                     <button key={t.key} onClick={() => setTab(t.key)} style={{
                         padding: '7px 18px', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600,
                         cursor: 'pointer', background: tab === t.key ? '#fff' : 'transparent',
@@ -58,6 +67,27 @@ export default function ClientSLAReports() {
 
             {tab === 'overview' ? (
                 <>
+                    {/* SLA + EPR Dual Banner */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                        {/* SLA Snapshot */}
+                        <div style={{ background: 'linear-gradient(135deg,#eff6ff,#dbeafe)', border: '1.5px solid #bfdbfe', borderRadius: 12, padding: '16px 20px' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>⚡ SLA Snapshot</div>
+                            <div style={{ fontSize: 26, fontWeight: 800, color: '#1e40af' }}>97.2%</div>
+                            <div style={{ fontSize: 12, color: '#1e40af', opacity: 0.75 }}>Compliance · {'>'}SLA target (95%)</div>
+                            <div style={{ marginTop: 8, height: 6, background: '#bfdbfe', borderRadius: 4, overflow: 'hidden' }}>
+                                <div style={{ width: '97.2%', height: '100%', background: 'linear-gradient(90deg,#2563eb,#60a5fa)', borderRadius: 4 }} />
+                            </div>
+                        </div>
+                        {/* EPR Snapshot */}
+                        <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1.5px solid #bbf7d0', borderRadius: 12, padding: '16px 20px' }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>🌿 EPR Snapshot</div>
+                            <div style={{ fontSize: 26, fontWeight: 800, color: '#166534' }}>88/100</div>
+                            <div style={{ fontSize: 12, color: '#166534', opacity: 0.75 }}>Score · {'>'}CPCB target (80 pts)</div>
+                            <div style={{ marginTop: 8, height: 6, background: '#bbf7d0', borderRadius: 4, overflow: 'hidden' }}>
+                                <div style={{ width: '88%', height: '100%', background: 'linear-gradient(90deg,#16a34a,#22c55e)', borderRadius: 4 }} />
+                            </div>
+                        </div>
+                    </div>
                     {/* Scorecard */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
                         {[
@@ -115,7 +145,7 @@ export default function ClientSLAReports() {
                         </div>
                     </div>
                 </>
-            ) : (
+            ) : tab === 'breaches' ? (
                 /* Breach Log Table */
                 <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e9f0', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -151,6 +181,29 @@ export default function ClientSLAReports() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+            ) : (
+                /* EPR Compliance Tab */
+                <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e', marginBottom: 16 }}>EPR Compliance Metrics — FY 2025–26</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+                        {eprMetrics.map(m => (
+                            <div key={m.label} style={{ background: '#fff', border: '1px solid #e5e9f0', borderRadius: 10, padding: '14px 16px' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#5a6478', textTransform: 'uppercase', marginBottom: 4 }}>{m.label}</div>
+                                <div style={{ fontSize: 22, fontWeight: 800, color: m.color }}>{m.value}</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                                    <span style={{ fontSize: 11, color: '#5a6478' }}>Target: {m.target}</span>
+                                    <span style={{
+                                        fontSize: 10.5, fontWeight: 700, borderRadius: 20, padding: '2px 8px',
+                                        background: m.color + '18', color: m.color,
+                                    }}>{m.status}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ marginTop: 20, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '16px 20px', fontSize: 13, color: '#166534' }}>
+                        <strong>✓ Phase 1 EPR Target Met</strong> — Your recycling rate of 76.4% far exceeds the mandatory 5% threshold under C&D Waste Management Rules 2025. All TSPCB certificates are on track.
+                    </div>
                 </div>
             )}
         </div>
