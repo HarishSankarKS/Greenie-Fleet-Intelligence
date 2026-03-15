@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import ClientPortalLayout from './components/ClientPortalLayout'
@@ -27,7 +27,7 @@ import './index.css'
 
 export default function App() {
   return (
-    <BrowserRouter basename="/Greenie-Fleet-Intelligence">
+    <HashRouter>
       <Routes>
         {/* Root → login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -78,6 +78,6 @@ export default function App() {
           </div>
         } />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
