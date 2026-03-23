@@ -1,57 +1,76 @@
-import { useState } from 'react'
-import { Plus, Search, Wrench, Edit2, Trash2, DollarSign } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Search, Wrench, Trash2, DollarSign, Check, Clock, AlertTriangle } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-
-const initialRecords = [
-    { id: 'M-001', vehicle: 'TN-09-AB-1234', vehicleId: 'V-001', date: '2026-01-15', cost: 12500, desc: 'Engine oil change, filter replacement', status: 'completed' },
-    { id: 'M-002', vehicle: 'TN-38-EF-9012', vehicleId: 'V-003', date: '2026-02-18', cost: 45000, desc: 'Transmission repair and brake overhaul', status: 'active' },
-    { id: 'M-003', vehicle: 'TN-11-CD-5678', vehicleId: 'V-002', date: '2026-02-01', cost: 8200, desc: 'Tire rotation and alignment check', status: 'completed' },
-    { id: 'M-004', vehicle: 'TN-58-IJ-7890', vehicleId: 'V-005', date: '2026-02-10', cost: 18700, desc: 'Hydraulic system maintenance', status: 'completed' },
-    { id: 'M-005', vehicle: 'TN-44-GH-3456', vehicleId: 'V-004', date: '2026-02-25', cost: 32000, desc: 'Full engine overhaul scheduled', status: 'pending' },
-    { id: 'M-006', vehicle: 'TN-77-KL-2345', vehicleId: 'V-006', date: '2026-01-05', cost: 6800, desc: 'Coolant flush and radiator cleaning', status: 'completed' },
-]
-
-const costByMonth = [
-    { month: 'Sep', cost: 38000 },
-    { month: 'Oct', cost: 52000 },
-    { month: 'Nov', cost: 41000 },
-    { month: 'Dec', cost: 67000 },
-    { month: 'Jan', cost: 48000 },
-    { month: 'Feb', cost: 122900 },
-]
-
-const emptyForm = { vehicle: '', date: '', cost: '', desc: '', status: 'pending' }
+import { getMaintenanceRecords, insertMaintenanceRecord, updateMaintenanceStatus } from '../utils/supabaseHelpers'
+import { getVehicles } from '../utils/supabaseHelpers'
 
 export default function Maintenance() {
-    const [records, setRecords] = useState(initialRecords)
+    const [records, setRecords] = useState([])
+    const [vehicles, setVehicles] = useState([])
+    const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [showModal, setShowModal] = useState(false)
-    const [form, setForm] = useState(emptyForm)
+    const [form, setForm] = useState({ vehicle_id: '', date: '', cost: '', description: '', status: 'pending' })
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        Promise.all([getMaintenanceRecords(), getVehicles()]).then(([r, v]) => {
+            setRecords(r); setVehicles(v); setLoading(false)
+        })
+    }, [])
 
     const filtered = records.filter(r =>
-        r.vehicle.toLowerCase().includes(search.toLowerCase()) ||
-        r.desc.toLowerCase().includes(search.toLowerCase())
+        r.vehicles?.plate_number?.toLowerCase().includes(search.toLowerCase()) ||
+        r.description?.toLowerCase().includes(search.toLowerCase())
     )
 
-    const totalCost = records.reduce((sum, r) => sum + r.cost, 0)
+    const totalCost = records.reduce((sum, r) => sum + (r.cost || 0), 0)
 
-    const handleAdd = () => {
-        if (!form.vehicle || !form.date) return
-        setRecords(prev => [...prev, { ...form, id: `M-00${prev.length + 1}`, vehicleId: '—', cost: Number(form.cost) || 0 }])
-        setForm(emptyForm)
-        setShowModal(false)
+    // Build chart data from actual records
+    const costByMonth = (() => {
+        const months = {}
+        records.forEach(r => {
+            const m = r.date ? new Date(r.date).toLocaleString('en-IN', { month: 'short' }) : '?'
+            months[m] = (months[m] || 0) + (r.cost || 0)
+        })
+        return Object.entries(months).map(([month, cost]) => ({ month, cost }))
+    })()
+
+    const handleAdd = async () => {
+        if (!form.vehicle_id || !form.date) return
+        setSaving(true)
+        const newRec = await insertMaintenanceRecord({ ...form, id: `M-${String(records.length + 1).padStart(3, '0')}`, cost: Number(form.cost) || 0 })
+        if (newRec) {
+            // Refresh to get joined vehicle data
+            const fresh = await getMaintenanceRecords()
+            setRecords(fresh)
+        }
+        setSaving(false); setShowModal(false)
+        setForm({ vehicle_id: '', date: '', cost: '', description: '', status: 'pending' })
     }
+
+    const handleStatusChange = async (record, newStatus) => {
+        await updateMaintenanceStatus(record.id, newStatus, record.vehicle_id)
+        setRecords(prev => prev.map(r => r.id === record.id ? { ...r, status: newStatus } : r))
+        // Also update local vehicle status
+        setVehicles(prev => prev.map(v => {
+            if (v.id !== record.vehicle_id) return v
+            const ns = newStatus === 'active' ? 'maintenance' : newStatus === 'completed' ? 'idle' : v.status
+            return { ...v, status: ns }
+        }))
+    }
+
+    const STATUS_ICON = { completed: <Check size={12} />, active: <Clock size={12} />, pending: <AlertTriangle size={12} /> }
+    const STATUS_CLASS = { completed: 'green', active: 'amber', pending: 'blue' }
 
     return (
         <div>
             <div className="page-header">
                 <div>
                     <div className="page-title">Maintenance</div>
-                    <div className="page-subtitle">Service schedules, tracking, and cost management</div>
+                    <div className="page-subtitle">Service schedules, tracking, and cost management · Live via Supabase</div>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-                    <Plus size={15} /> Schedule Maintenance
-                </button>
+                <button className="btn btn-primary" onClick={() => setShowModal(true)}><Plus size={15} /> Schedule Maintenance</button>
             </div>
 
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
@@ -83,13 +102,12 @@ export default function Maintenance() {
                         </ResponsiveContainer>
                     </div>
                 </div>
-
                 <div className="card">
                     <div className="card-header"><span className="card-title">Status Breakdown</span></div>
                     <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         {['completed', 'active', 'pending'].map(s => {
                             const cnt = records.filter(r => r.status === s).length
-                            const pct = Math.round(cnt / records.length * 100)
+                            const pct = records.length ? Math.round(cnt / records.length * 100) : 0
                             return (
                                 <div key={s}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
@@ -114,37 +132,56 @@ export default function Maintenance() {
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search records..." />
                     </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table">
-                        <thead>
-                            <tr><th>ID</th><th>Vehicle</th><th>Date</th><th>Description</th><th>Cost</th><th>Status</th><th>Actions</th></tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map(r => (
-                                <tr key={r.id}>
-                                    <td><strong>{r.id}</strong></td>
-                                    <td style={{ fontWeight: 600 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <Wrench size={13} style={{ color: 'var(--color-primary)' }} />{r.vehicle}
-                                        </div>
-                                    </td>
-                                    <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{r.date}</td>
-                                    <td style={{ fontSize: 12.5, maxWidth: 260 }}>{r.desc}</td>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-                                            <DollarSign size={12} style={{ color: 'var(--color-text-muted)' }} />
-                                            ₹{r.cost.toLocaleString()}
-                                        </div>
-                                    </td>
-                                    <td><span className={`status-badge ${r.status === 'active' ? 'idle' : r.status}`}><span className="dot" />{r.status.charAt(0).toUpperCase() + r.status.slice(1)}</span></td>
-                                    <td>
-                                        <button className="btn btn-danger btn-sm" style={{ padding: '4px 8px' }} onClick={() => setRecords(prev => prev.filter(x => x.id !== r.id))}><Trash2 size={13} /></button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                {loading ? (
+                    <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading records…</div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
+                            <thead>
+                                <tr><th>ID</th><th>Vehicle</th><th>Date</th><th>Description</th><th>Cost</th><th>Status</th><th>Update Status</th></tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map(r => (
+                                    <tr key={r.id}>
+                                        <td><strong>{r.id}</strong></td>
+                                        <td style={{ fontWeight: 600 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Wrench size={13} style={{ color: 'var(--color-primary)' }} />
+                                                {r.vehicles?.plate_number || r.vehicle_id}
+                                                {r.vehicles?.model && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 4 }}>({r.vehicles.model})</span>}
+                                            </div>
+                                        </td>
+                                        <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{r.date}</td>
+                                        <td style={{ fontSize: 12.5, maxWidth: 260 }}>{r.description}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+                                                <DollarSign size={12} style={{ color: 'var(--color-text-muted)' }} />
+                                                ₹{(r.cost || 0).toLocaleString()}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className={`status-badge ${STATUS_CLASS[r.status] || 'amber'}`}>
+                                                {STATUS_ICON[r.status]} <span className="dot" />{r.status?.charAt(0).toUpperCase() + r.status?.slice(1)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <select
+                                                className="form-select"
+                                                style={{ fontSize: 12, padding: '4px 8px', minWidth: 130 }}
+                                                value={r.status}
+                                                onChange={e => handleStatusChange(r, e.target.value)}
+                                            >
+                                                <option value="pending">Pending</option>
+                                                <option value="active">In Progress</option>
+                                                <option value="completed">Completed</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             {showModal && (
@@ -157,8 +194,11 @@ export default function Maintenance() {
                         <div className="modal-body">
                             <div className="form-grid">
                                 <div className="form-group">
-                                    <label className="form-label">Vehicle Plate *</label>
-                                    <input className="form-input" value={form.vehicle} onChange={e => setForm(p => ({ ...p, vehicle: e.target.value }))} placeholder="e.g. TN-09-AB-1234" />
+                                    <label className="form-label">Vehicle *</label>
+                                    <select className="form-select" value={form.vehicle_id} onChange={e => setForm(p => ({ ...p, vehicle_id: e.target.value }))}>
+                                        <option value="">— Select vehicle —</option>
+                                        {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate_number} ({v.model})</option>)}
+                                    </select>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Date *</label>
@@ -179,12 +219,12 @@ export default function Maintenance() {
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Description</label>
-                                <textarea className="form-input" rows={3} value={form.desc} onChange={e => setForm(p => ({ ...p, desc: e.target.value }))} placeholder="Describe the maintenance work..." style={{ resize: 'vertical' }} />
+                                <textarea className="form-input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} placeholder="Describe the maintenance work..." style={{ resize: 'vertical' }} />
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleAdd}>Schedule</button>
+                            <button className="btn btn-primary" onClick={handleAdd} disabled={saving}>{saving ? 'Saving…' : 'Schedule'}</button>
                         </div>
                     </div>
                 </div>

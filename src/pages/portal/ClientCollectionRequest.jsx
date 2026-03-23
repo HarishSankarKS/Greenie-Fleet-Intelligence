@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../../utils/supabaseClient'
+import { getCollectionSites } from '../../utils/supabaseHelpers'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { MapPin, Truck, Calendar, Clock, Package, Send, CheckCircle, Calculator, Download } from 'lucide-react'
@@ -116,22 +118,7 @@ function generateBookingReceipt({ submitted, form, rateInfo, baseRate, subtotal,
     doc.output('save', `GRN-${submitted.id}-RECEIPT.pdf`)
 }
 
-// 12 active demolition / construction pickup sites in Coimbatore
-const siteOptions = [
-    { id: 'CBE-S01', label: 'RS Puram Old Residential Block (Ward 70)',    zone: 'South' },
-    { id: 'CBE-S02', label: 'Gandhipuram Commercial Teardown (Ward 67)',   zone: 'North' },
-    { id: 'CBE-S03', label: 'Peelamedu Junction Warehouse Site (Ward 36)', zone: 'East'  },
-    { id: 'CBE-S04', label: 'Ramanathapuram Layout Demo (Ward 33)',        zone: 'South' },
-    { id: 'CBE-S05', label: 'Ondipudur Bypass Road Works (Ward 29)',       zone: 'East'  },
-    { id: 'CBE-S06', label: 'Ganapathy 4th Cross Site (Ward 55)',          zone: 'North' },
-    { id: 'CBE-S07', label: 'Kovaipudur Hill Access Road (Ward 82)',       zone: 'West'  },
-    { id: 'CBE-S08', label: 'Saibaba Colony Junction Demo (Ward 69)',      zone: 'North' },
-    { id: 'CBE-S09', label: 'Kalapatti IT Corridor (Ward 23)',             zone: 'East'  },
-    { id: 'CBE-S10', label: 'Podanur Railway-Adjacent Site (Ward 90)',     zone: 'South' },
-    { id: 'CBE-S11', label: 'Sowripalayam Old Factory (Ward 45)',          zone: 'South' },
-    { id: 'CBE-S12', label: 'Mettupalayam Rd Flyover Site (Ward 2)',       zone: 'North' },
-    { id: 'CUSTOM',  label: 'Other / Custom Location',                     zone: null    },
-]
+
 
 // Each zone routes to its Transfer Station
 const ZONE_TO_TS = {
@@ -162,6 +149,21 @@ export default function ClientCollectionRequest() {
         date: '', time: 'morning', notes: '', urgent: false,
     })
     const [submitted, setSubmitted] = useState(null)
+    const [submitting, setSubmitting] = useState(false)
+    const [submitError, setSubmitError] = useState(null)
+    const [siteOptions, setSiteOptions] = useState([{ id: 'CUSTOM', label: 'Other / Custom Location', zone: null }])
+
+    // Load sites from DB (same list as admin CollectionSites page)
+    useEffect(() => {
+        getCollectionSites().then(sites => {
+            const options = sites.map(s => ({
+                id: s.id,
+                label: `${s.name} (Ward ${s.ward})`,
+                zone: s.zone,
+            }))
+            setSiteOptions([...options, { id: 'CUSTOM', label: 'Other / Custom Location', zone: null }])
+        })
+    }, [])
 
     const rateInfo = RATES[form.wasteType] || RATES['Mixed C&D Debris']
     const baseRate = rateInfo.rate
@@ -171,9 +173,33 @@ export default function ClientCollectionRequest() {
     const total = subtotal + gstAmt
     const isTipping = rateInfo.tip
 
-    const handleSubmit = () => {
-        const reqId = `REQ-${2000 + Math.floor(Math.random() * 100)}`
-        setSubmitted({ id: reqId, eta: isTipping ? 'Next working day' : '45 min', total: total.toLocaleString('en-IN', { maximumFractionDigits: 0 }), isTipping })
+    const handleSubmit = async () => {
+        setSubmitting(true)
+        setSubmitError(null)
+        const siteObj = siteOptions.find(s => s.id === form.site)
+        const siteLabel = form.site === 'CUSTOM' ? form.customAddr : (siteObj?.label || form.site)
+        const zone = siteObj?.zone || null
+        const { data, error } = await supabase
+            .from('collection_requests')
+            .insert([{
+                client_id:    'XYZ Constructions Pvt Ltd',  // replace with auth user later
+                waste_type:   form.wasteType,
+                volume:       form.estWeight ? `${form.estWeight} T` : 'Unknown',
+                location:     siteLabel,
+                site_label:   zone ? ZONE_TO_TS[zone] : 'To be assigned',
+                service_type: form.urgent ? 'Urgent' : 'Standard',
+                status:       'pending',
+            }])
+            .select()
+            .single()
+        setSubmitting(false)
+        if (error) {
+            console.error('handleSubmit:', error)
+            setSubmitError('Failed to submit. Please try again.')
+            return
+        }
+        const reqId = data.id.slice(0, 8).toUpperCase()
+        setSubmitted({ id: reqId, dbId: data.id, eta: isTipping ? 'Next working day' : '45 min', total: total.toLocaleString('en-IN', { maximumFractionDigits: 0 }), isTipping })
     }
 
     const inputStyle = {
@@ -345,10 +371,11 @@ export default function ClientCollectionRequest() {
                             ))}
                             <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', marginTop: 20 }}>
                                 <button onClick={() => setStep(2)} style={{ padding: '10px 20px', background: '#f0f2f5', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#5a6478' }}>← Back</button>
-                                <button onClick={handleSubmit} style={{
+                                <button onClick={handleSubmit} disabled={submitting} style={{
                                     display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px',
-                                    background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                                }}><Send size={14} /> Submit Request</button>
+                                    background: submitting ? '#9ca3af' : '#10b981', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer',
+                                }}><Send size={14} /> {submitting ? 'Submitting…' : 'Submit Request'}</button>
+                                {submitError && <div style={{ color: '#ef4444', fontSize: 12, marginTop: 8 }}>{submitError}</div>}
                             </div>
                         </div>
                     )}

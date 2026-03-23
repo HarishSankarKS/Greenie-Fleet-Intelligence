@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
     ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell
 } from 'recharts'
 import {
     Truck, CheckCircle, Clock, AlertTriangle, TrendingUp,
-    Activity, Plus, ArrowUpRight, ArrowDownRight, Leaf, Wind, IndianRupee
+    Activity, Plus, ArrowUpRight, ArrowDownRight, Leaf, Wind, IndianRupee, Bell, Package
 } from 'lucide-react'
+import { subscribeToMarketplaceOrders, subscribeToCollectionRequests, updateOrderStatus, getMarketplaceOrders, getCollectionRequests } from '../utils/analyticsData'
+import { getVehicles, subscribeToVehicles } from '../utils/supabaseHelpers'
 
 const collectionTrend = [
     { day: 'Mon', completed: 42, pending: 8 },
@@ -18,35 +20,84 @@ const collectionTrend = [
     { day: 'Sun', completed: 30, pending: 4 },
 ]
 
-const statusData = [
+const STATIC_STATUS_DATA = [
     { name: 'Active', value: 68, color: '#10b981' },
     { name: 'Idle', value: 22, color: '#f59e0b' },
     { name: 'Maintenance', value: 10, color: '#ef4444' },
 ]
 
-const recentActivity = [
-    { id: 'U-001', site: 'RS Puram C&D Site', type: 'C&D Waste', status: 'completed', time: '10 min ago', driver: 'Murugan R.' },
-    { id: 'U-012', site: 'Gandhipuram Collection Pt', type: 'Mixed Debris', status: 'active', time: '25 min ago', driver: 'Karthik S.' },
-    { id: 'U-034', site: 'Saravanampatti IT Zone', type: 'C&D Waste', status: 'pending', time: '1 hr ago', driver: 'Selvam P.' },
-    { id: 'U-007', site: 'Singanallur Depot', type: 'Mixed Waste', status: 'maintenance', time: '2 hr ago', driver: 'Rajan K.' },
-    { id: 'U-019', site: 'Ukkadam Sorting Yard', type: 'Concrete Rubble', status: 'completed', time: '3 hr ago', driver: 'Kavitha S.' },
-]
-
-const kpis = [
-    { label: 'Total Units', value: '124', change: '+4', up: true, sub: 'vs last month', color: 'teal', icon: Truck },
-    { label: 'Active Units', value: '84', change: '+7', up: true, sub: 'currently operating', color: 'green', icon: Activity },
-    { label: 'Pending Collections', value: '23', change: '-3', up: false, sub: 'awaiting dispatch', color: 'amber', icon: Clock },
-    { label: 'Completed Today', value: '61', change: '+12', up: true, sub: 'since midnight', color: 'blue', icon: CheckCircle },
-    { label: 'In Maintenance', value: '17', change: '+2', up: false, sub: 'under service', color: 'red', icon: AlertTriangle },
-]
+const STATUS_COLORS = { pending: '#f59e0b', dispatched: '#3b82f6', delivered: '#10b981', allocated: '#8b5cf6' }
 
 export default function Dashboard() {
+    const [liveRequests, setLiveRequests] = useState([]) // collection requests from Client Portal
+    const [liveOrders, setLiveOrders]     = useState([]) // orders from Marketplace
+    const [reqBadge, setReqBadge]         = useState(0)
+    const [ordBadge, setOrdBadge]         = useState(0)
+    const [vehicles, setVehicles]         = useState([]) // live fleet data
+
+    // Computed live KPIs from DB
+    const kpis = [
+        { label: 'Total Units',        value: vehicles.length || '—',                                      change: '+4',  up: true,  sub: 'fleet vehicles', color: 'teal',  icon: Truck },
+        { label: 'Active Units',       value: vehicles.filter(v => v.status === 'active').length || '—',     change: '+7',  up: true,  sub: 'currently operating', color: 'green', icon: Activity },
+        { label: 'Pending Collections',value: liveRequests.length + liveOrders.length,                      change: '-3',  up: false, sub: 'awaiting dispatch', color: 'amber', icon: Clock },
+        { label: 'Completed Today',    value: '61',                                                          change: '+12', up: true,  sub: 'since midnight', color: 'blue',  icon: CheckCircle },
+        { label: 'In Maintenance',     value: vehicles.filter(v => v.status === 'maintenance').length || '—', change: '+2',  up: false, sub: 'under service', color: 'red',   icon: AlertTriangle },
+    ]
+
+    // Live status data for pie chart
+    const statusData = vehicles.length ? [
+        { name: 'Active',      value: vehicles.filter(v => v.status === 'active').length,      color: '#10b981' },
+        { name: 'Idle',        value: vehicles.filter(v => v.status === 'idle').length,        color: '#f59e0b' },
+        { name: 'Maintenance', value: vehicles.filter(v => v.status === 'maintenance').length, color: '#ef4444' },
+    ] : STATIC_STATUS_DATA
+
+    useEffect(() => {
+        // Fetch existing pending requests/orders
+        getCollectionRequests().then(data => {
+            setLiveRequests(data.filter(r => r.status === 'pending'))
+        })
+        getMarketplaceOrders().then(data => {
+            setLiveOrders(data.filter(o => o.status === 'pending'))
+        })
+
+        // Fetch live fleet vehicles
+        getVehicles().then(setVehicles)
+
+        // Subscribe to vehicle status changes (maintenance updates etc.)
+        const vehChannel = subscribeToVehicles(() => {
+            getVehicles().then(setVehicles)
+        })
+
+        // Subscribe to new Client Portal collection requests
+        const reqChannel = subscribeToCollectionRequests((newRow) => {
+            setLiveRequests(prev => [newRow, ...prev])
+            setReqBadge(prev => prev + 1)
+        })
+
+        // Subscribe to new Marketplace orders
+        const ordChannel = subscribeToMarketplaceOrders((newRow) => {
+            setLiveOrders(prev => [newRow, ...prev])
+            setOrdBadge(prev => prev + 1)
+        })
+
+        return () => {
+            vehChannel.unsubscribe()
+            reqChannel.unsubscribe()
+            ordChannel.unsubscribe()
+        }
+    }, [])
+
+    const handleDispatch = async (order) => {
+        const ok = await updateOrderStatus(order.id, 'dispatched')
+        if (ok) setLiveOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'dispatched' } : o))
+    }
+
     return (
         <div>
             <div className="page-header">
                 <div>
                     <div className="page-title">Operations Dashboard</div>
-                    <div className="page-subtitle">Real-time overview of C&D waste collection units across Coimbatore · Friday, 6 Mar 2026</div>
+                    <div className="page-subtitle">Real-time overview of C&D waste collection units across Coimbatore · Live via Supabase</div>
                 </div>
                 <button className="btn btn-primary"><Plus size={15} /> New Collection</button>
             </div>
@@ -69,6 +120,87 @@ export default function Dashboard() {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* ── LIVE ALERTS SECTION ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+
+                {/* Incoming Collection Requests from Client Portal */}
+                <div className="card">
+                    <div className="card-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Bell size={15} color="#f59e0b" />
+                            <span className="card-title">Client Collection Requests</span>
+                            {reqBadge > 0 && (
+                                <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '2px 7px' }}>
+                                    {reqBadge} new
+                                </span>
+                            )}
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Live · Supabase Realtime</span>
+                    </div>
+                    <div style={{ padding: '12px 16px' }}>
+                        {liveRequests.length === 0 ? (
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: 13, padding: '12px 0', textAlign: 'center' }}>
+                                Listening for new requests…
+                            </div>
+                        ) : liveRequests.slice(0, 5).map((req, i) => (
+                            <div key={req.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 600 }}>{req.waste_type} — {req.volume}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{req.location} · {req.client_id}</div>
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 700, background: '#fef3c7', color: '#92400e', borderRadius: 10, padding: '2px 8px' }}>
+                                    {req.status?.toUpperCase()}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Incoming Marketplace Orders */}
+                <div className="card">
+                    <div className="card-header">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Package size={15} color="#3b82f6" />
+                            <span className="card-title">Marketplace Orders</span>
+                            {ordBadge > 0 && (
+                                <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 10, padding: '2px 7px' }}>
+                                    {ordBadge} new
+                                </span>
+                            )}
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Live · Supabase Realtime</span>
+                    </div>
+                    <div style={{ padding: '12px 16px' }}>
+                        {liveOrders.length === 0 ? (
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: 13, padding: '12px 0', textAlign: 'center' }}>
+                                Listening for new orders…
+                            </div>
+                        ) : liveOrders.slice(0, 5).map((ord, i) => (
+                            <div key={ord.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 600 }}>{ord.material_name} — {ord.quantity}T</div>
+                                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{ord.buyer_name} · ₹{ord.total_amount?.toLocaleString('en-IN')}</div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, background: STATUS_COLORS[ord.status] + '22', color: STATUS_COLORS[ord.status], borderRadius: 10, padding: '2px 8px' }}>
+                                        {ord.status?.toUpperCase()}
+                                    </span>
+                                    {ord.status === 'pending' && (
+                                        <button
+                                            onClick={() => handleDispatch(ord)}
+                                            className="btn btn-primary"
+                                            style={{ fontSize: 11, padding: '4px 10px' }}
+                                        >
+                                            Dispatch
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* Charts Row */}
@@ -128,7 +260,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* ── Carbon Impact Card ── */}
+            {/* Carbon Impact Card */}
             <div className="card" style={{ marginBottom: 24, background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '1.5px solid #bbf7d0' }}>
                 <div className="card-header" style={{ borderBottom: '1px solid #bbf7d0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -145,30 +277,10 @@ export default function Dashboard() {
                 <div className="card-body">
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
                         {[
-                            {
-                                icon: Wind, label: 'CO₂ Diverted Today',
-                                value: `${(61 * 3 * 0.42).toFixed(1)} t`,
-                                sub: '61 jobs × avg 3T × 0.42 factor',
-                                color: '#166534', bg: '#dcfce7', border: '#bbf7d0',
-                            },
-                            {
-                                icon: Leaf, label: 'Tree Equivalent',
-                                value: `${Math.round(61 * 3 * 0.42 * 45)} 🌳`,
-                                sub: '1 tonne CO₂ ≈ 45 trees/year',
-                                color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0',
-                            },
-                            {
-                                icon: IndianRupee, label: 'Carbon Credit Value',
-                                value: `₹${((61 * 3 * 0.42) * 600).toLocaleString('en-IN')}`,
-                                sub: '@ ₹600/t CO₂ (voluntary market)',
-                                color: '#854d0e', bg: '#fefce8', border: '#fde68a',
-                            },
-                            {
-                                icon: TrendingUp, label: 'Monthly Projection',
-                                value: `${(61 * 26 * 3 * 0.42).toFixed(0)} t CO₂`,
-                                sub: 'At today\'s rate × 26 working days',
-                                color: '#1e40af', bg: '#eff6ff', border: '#bfdbfe',
-                            },
+                            { icon: Wind, label: 'CO₂ Diverted Today', value: `${(61 * 3 * 0.42).toFixed(1)} t`, sub: '61 jobs × avg 3T × 0.42 factor', color: '#166534', bg: '#dcfce7', border: '#bbf7d0' },
+                            { icon: Leaf, label: 'Tree Equivalent', value: `${Math.round(61 * 3 * 0.42 * 45)} 🌳`, sub: '1 tonne CO₂ ≈ 45 trees/year', color: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' },
+                            { icon: IndianRupee, label: 'Carbon Credit Value', value: `₹${((61 * 3 * 0.42) * 800).toLocaleString('en-IN')}`, sub: '@ ₹800/t CO₂ (IEX Green Market)', color: '#854d0e', bg: '#fefce8', border: '#fde68a' },
+                            { icon: TrendingUp, label: 'Monthly Projection', value: `${(61 * 26 * 3 * 0.42).toFixed(0)} t CO₂`, sub: "At today's rate × 26 working days", color: '#1e40af', bg: '#eff6ff', border: '#bfdbfe' },
                         ].map(({ icon: Icon, label, value, sub, color, bg, border }) => (
                             <div key={label} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 10, padding: '14px 16px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
@@ -180,39 +292,6 @@ export default function Dashboard() {
                             </div>
                         ))}
                     </div>
-                </div>
-            </div>
-
-            {/* Recent Activity Table */}
-            <div className="card">
-                <div className="card-header">
-                    <span className="card-title">Recent Activity</span>
-                    <button className="btn btn-outline btn-sm">View All</button>
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Unit ID</th><th>Collection Site</th><th>Waste Type</th><th>Driver</th><th>Status</th><th>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {recentActivity.map(row => (
-                                <tr key={row.id}>
-                                    <td><strong>{row.id}</strong></td>
-                                    <td>{row.site}</td>
-                                    <td>{row.type}</td>
-                                    <td>{row.driver}</td>
-                                    <td>
-                                        <span className={`status-badge ${row.status}`}>
-                                            <span className="dot" />{row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                                        </span>
-                                    </td>
-                                    <td style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{row.time}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>

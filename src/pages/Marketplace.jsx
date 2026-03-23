@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -7,7 +7,7 @@ import {
     Package, TrendingUp, IndianRupee, CheckCircle, ChevronDown, ChevronUp,
     Truck, ArrowDownToLine, ArrowUpFromLine
 } from 'lucide-react'
-import { initialInventory, CATEGORY_COLORS, CATEGORY_HSN } from '../utils/siteInventory'
+import { getSiteInventory, CATEGORY_COLORS, CATEGORY_HSN } from '../utils/siteInventory'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -249,7 +249,12 @@ function generateInvoicePDF(inv) {
 const TIPPING_RATE = 400 // ₹/tonne default
 
 export default function Marketplace() {
-    const [inventory, setInventory] = useState(initialInventory)
+    const [inventory, setInventory] = useState([])
+    const [invLoading, setInvLoading] = useState(true)
+
+    useEffect(() => {
+        getSiteInventory().then(data => { setInventory(data); setInvLoading(false) })
+    }, [])
     const [invoices, setInvoices] = useState(sampleInvoices)
     const [expandedSites, setExpandedSites] = useState({})
     const [filterSite, setFilterSite] = useState('All')

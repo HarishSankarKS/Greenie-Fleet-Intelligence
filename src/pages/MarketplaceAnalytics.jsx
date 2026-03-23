@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
     BarChart, Bar, AreaChart, Area, LineChart, Line,
     PieChart, Pie, Cell, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -11,10 +11,11 @@ import {
 } from 'lucide-react'
 import {
     revenueByMaterial, revenueByZone, gmvTrend, GMV_MONTHLY_TARGET,
-    turnoverData, topBuyers, soldVsAvailable, initialPricing,
-    priceTrend, informalBaseline, complianceData, summaryKPIs
+    turnoverData, topBuyers, soldVsAvailable,
+    priceTrend, informalBaseline, complianceData, summaryKPIs,
+    getMaterials, updateMaterialPrice
 } from '../utils/analyticsData'
-import { initialInventory, CATEGORY_COLORS } from '../utils/siteInventory'
+import { getSiteInventory, CATEGORY_COLORS } from '../utils/siteInventory'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -378,9 +379,14 @@ function RevenueTab() {
 function InventoryTab() {
     const [filterSite, setFilterSite]   = useState('All')
     const [filterMat, setFilterMat]     = useState('All')
+    const [inventory, setInventory]     = useState([])
+
+    useEffect(() => {
+        getSiteInventory().then(data => setInventory(data))
+    }, [])
 
     // Flatten inventory to table rows
-    const allRows = initialInventory.flatMap(site =>
+    const allRows = inventory.flatMap(site =>
         site.materials.map(mat => ({
             siteName: site.siteName,
             siteId:   site.siteId,
@@ -410,7 +416,7 @@ function InventoryTab() {
             {/* Sub-KPIs */}
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
                 {[
-                    { label: 'Total Stock Available', value: `${initialInventory.reduce((s, site) => s + site.materials.reduce((m, mat) => m + mat.availableTonnes, 0), 0).toFixed(1)} T`, color: 'teal', icon: Package, sub: 'across 4 transfer stations' },
+                    { label: 'Total Stock Available', value: `${inventory.reduce((s, site) => s + site.materials.reduce((m, mat) => m + mat.availableTonnes, 0), 0).toFixed(1)} T`, color: 'teal', icon: Package, sub: 'across 4 transfer stations' },
                     { label: 'Pending Batches',        value: summaryKPIs.pendingBatches, color: 'amber', icon: Clock, sub: 'awaiting admin publish' },
                     { label: 'Sold This Month',         value: `${summaryKPIs.soldTonnesThisMonth} T`, color: 'green', icon: TrendingUp, sub: 'total offloaded' },
                     {
@@ -544,21 +550,40 @@ function InventoryTab() {
 
 // ─── TAB 3: Pricing Control ───────────────────────────────────────────────────
 function PricingTab() {
-    const [pricing, setPricing] = useState(initialPricing)
+    const [pricing, setPricing] = useState([])
     const [editRow, setEditRow] = useState(null)
     const [editPrice, setEditPrice] = useState('')
     const [editDate, setEditDate]   = useState('')
     const [activeMat, setActiveMat] = useState('Concrete Rubble')
 
+    useEffect(() => {
+        getMaterials().then(data => {
+            // Map Supabase columns to the shape the UI expects
+            setPricing(data.map(r => ({
+                id:              r.id,
+                material:        r.material_name,
+                grade:           r.grade,
+                unit:            r.unit,
+                price:           r.price,
+                informalBaseline: r.informal_baseline,
+                hsn:             r.hsn,
+                lastUpdated:     r.updated_at ? r.updated_at.slice(0, 10) : '',
+            })))
+        })
+    }, [])
+
     const openEdit = (row) => { setEditRow(row); setEditPrice(String(row.price)); setEditDate('') }
     const closeEdit = () => { setEditRow(null); setEditPrice(''); setEditDate('') }
 
-    const saveEdit = () => {
+    const saveEdit = async () => {
         if (!editPrice || isNaN(editPrice)) return
-        setPricing(prev => prev.map(r => r.id === editRow.id
-            ? { ...r, price: parseFloat(editPrice), lastUpdated: editDate || new Date().toISOString().slice(0, 10) }
-            : r
-        ))
+        const ok = await updateMaterialPrice(editRow.id, parseFloat(editPrice))
+        if (ok) {
+            setPricing(prev => prev.map(r => r.id === editRow.id
+                ? { ...r, price: parseFloat(editPrice), lastUpdated: editDate || new Date().toISOString().slice(0, 10) }
+                : r
+            ))
+        }
         closeEdit()
     }
 

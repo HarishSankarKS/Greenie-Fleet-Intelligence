@@ -1,63 +1,71 @@
-import { useState } from 'react'
-import { Plus, Search, Truck, Edit2, Trash2, Eye } from 'lucide-react'
-
-const initialVehicles = [
-    { id: 'V-001', number: 'TN-09-AB-1234', model: 'Tata 407', type: 'Truck', status: 'active', driver: 'Murugan R.', lastService: '2026-01-15', mileage: '48,200 km' },
-    { id: 'V-002', number: 'TN-11-CD-5678', model: 'Ashok Leyland Dost', type: 'Truck', status: 'active', driver: 'Kavitha S.', lastService: '2026-02-01', mileage: '32,100 km' },
-    { id: 'V-003', number: 'TN-38-EF-9012', model: 'Mahindra Furio', type: 'Heavy Truck', status: 'maintenance', driver: 'Senthil K.', lastService: '2026-02-18', mileage: '71,500 km' },
-    { id: 'V-004', number: 'TN-44-GH-3456', model: 'Eicher Pro 2095', type: 'Truck', status: 'idle', driver: '—', lastService: '2026-01-28', mileage: '25,300 km' },
-    { id: 'V-005', number: 'TN-58-IJ-7890', model: 'Tata LPT 1412', type: 'Truck', status: 'active', driver: 'Arjun T.', lastService: '2026-02-10', mileage: '55,800 km' },
-    { id: 'V-006', number: 'TN-77-KL-2345', model: 'BharatBenz 1617R', type: 'Heavy Truck', status: 'active', driver: 'Priya M.', lastService: '2026-01-05', mileage: '103,200 km' },
-]
-
-const emptyForm = { number: '', model: '', type: 'Truck', status: 'active', driver: '' }
+import { useState, useEffect } from 'react'
+import { Plus, Search, Truck, Edit2, Trash2 } from 'lucide-react'
+import { getVehicles, upsertVehicle, deleteVehicle, subscribeToVehicles } from '../utils/supabaseHelpers'
+import { getDrivers } from '../utils/supabaseHelpers'
 
 export default function Vehicles() {
-    const [vehicles, setVehicles] = useState(initialVehicles)
+    const [vehicles, setVehicles] = useState([])
+    const [drivers, setDrivers] = useState([])
+    const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [showModal, setShowModal] = useState(false)
-    const [form, setForm] = useState(emptyForm)
+    const [form, setForm] = useState({ id: '', plate_number: '', model: '', type: 'Truck', driver_id: '', status: 'idle' })
     const [editId, setEditId] = useState(null)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        Promise.all([getVehicles(), getDrivers()]).then(([v, d]) => {
+            setVehicles(v); setDrivers(d); setLoading(false)
+        })
+        const ch = subscribeToVehicles(() => {
+            getVehicles().then(setVehicles)
+        })
+        return () => ch.unsubscribe()
+    }, [])
 
     const filtered = vehicles.filter(v =>
-        v.number.toLowerCase().includes(search.toLowerCase()) ||
-        v.model.toLowerCase().includes(search.toLowerCase()) ||
-        v.driver.toLowerCase().includes(search.toLowerCase())
+        v.plate_number?.toLowerCase().includes(search.toLowerCase()) ||
+        v.model?.toLowerCase().includes(search.toLowerCase()) ||
+        v.drivers?.name?.toLowerCase().includes(search.toLowerCase())
     )
 
-    const handleSave = () => {
-        if (!form.number || !form.model) return
-        if (editId) {
-            setVehicles(prev => prev.map(v => v.id === editId ? { ...v, ...form } : v))
-            setEditId(null)
-        } else {
-            setVehicles(prev => [...prev, { ...form, id: `V-00${prev.length + 1}`, lastService: '—', mileage: '0 km' }])
-        }
-        setForm(emptyForm)
-        setShowModal(false)
+    const openAdd = () => {
+        setForm({ id: `V-${String(vehicles.length + 1).padStart(3, '0')}`, plate_number: '', model: '', type: 'Truck', driver_id: '', status: 'idle' })
+        setEditId(null); setShowModal(true)
     }
 
-    const handleEdit = (v) => {
-        setForm({ number: v.number, model: v.model, type: v.type, status: v.status, driver: v.driver })
-        setEditId(v.id)
-        setShowModal(true)
+    const openEdit = (v) => {
+        setForm({ id: v.id, plate_number: v.plate_number, model: v.model, type: v.type, driver_id: v.driver_id || '', status: v.status })
+        setEditId(v.id); setShowModal(true)
     }
 
-    const handleDelete = (id) => setVehicles(prev => prev.filter(v => v.id !== id))
+    const handleSave = async () => {
+        if (!form.plate_number || !form.model) return
+        setSaving(true)
+        await upsertVehicle({ ...form, driver_id: form.driver_id || null })
+        const fresh = await getVehicles()
+        setVehicles(fresh)
+        setSaving(false); setShowModal(false)
+    }
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Delete this vehicle?')) return
+        await deleteVehicle(id)
+        setVehicles(prev => prev.filter(v => v.id !== id))
+    }
+
+    const STATUS_COLOR = { active: 'green', idle: 'amber', maintenance: 'red' }
 
     return (
         <div>
             <div className="page-header">
                 <div>
                     <div className="page-title">Vehicles</div>
-                    <div className="page-subtitle">Fleet vehicle registry and status management</div>
+                    <div className="page-subtitle">Fleet vehicle registry and status management · Live via Supabase</div>
                 </div>
-                <button className="btn btn-primary" onClick={() => { setForm(emptyForm); setEditId(null); setShowModal(true) }}>
-                    <Plus size={15} /> Add Vehicle
-                </button>
+                <button className="btn btn-primary" onClick={openAdd}><Plus size={15} /> Add Vehicle</button>
             </div>
 
-            {/* KPI */}
             <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 24 }}>
                 {[
                     { label: 'Total', value: vehicles.length, color: 'teal' },
@@ -80,40 +88,52 @@ export default function Vehicles() {
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by plate, model, driver..." />
                     </div>
                 </div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th><th>Plate No.</th><th>Model</th><th>Type</th><th>Driver</th><th>Status</th><th>Mileage</th><th>Last Service</th><th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map(v => (
-                                <tr key={v.id}>
-                                    <td><strong>{v.id}</strong></td>
-                                    <td style={{ fontWeight: 600 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <Truck size={13} style={{ color: 'var(--color-primary)' }} />
-                                            {v.number}
-                                        </div>
-                                    </td>
-                                    <td>{v.model}</td>
-                                    <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{v.type}</td>
-                                    <td>{v.driver}</td>
-                                    <td><span className={`status-badge ${v.status}`}><span className="dot" />{v.status.charAt(0).toUpperCase() + v.status.slice(1)}</span></td>
-                                    <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{v.mileage}</td>
-                                    <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{v.lastService}</td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: 6 }}>
-                                            <button className="btn btn-outline btn-sm" style={{ padding: '4px 8px' }} onClick={() => handleEdit(v)}><Edit2 size={13} /></button>
-                                            <button className="btn btn-danger btn-sm" style={{ padding: '4px 8px' }} onClick={() => handleDelete(v.id)}><Trash2 size={13} /></button>
-                                        </div>
-                                    </td>
+                {loading ? (
+                    <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading vehicles…</div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th><th>Plate No.</th><th>Model</th><th>Type</th>
+                                    <th>Assigned Driver</th><th>Status</th><th>Mileage</th><th>Last Service</th><th>Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {filtered.map(v => (
+                                    <tr key={v.id}>
+                                        <td><strong>{v.id}</strong></td>
+                                        <td style={{ fontWeight: 600 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Truck size={13} style={{ color: 'var(--color-primary)' }} />
+                                                {v.plate_number}
+                                            </div>
+                                        </td>
+                                        <td>{v.model}</td>
+                                        <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{v.type}</td>
+                                        <td style={{ fontSize: 13 }}>{v.drivers?.name || '—'}</td>
+                                        <td>
+                                            <span className={`status-badge ${STATUS_COLOR[v.status] || 'amber'}`}>
+                                                <span className="dot" />
+                                                {v.status?.charAt(0).toUpperCase() + v.status?.slice(1)}
+                                            </span>
+                                        </td>
+                                        <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                            {v.mileage_km?.toLocaleString() || '—'} km
+                                        </td>
+                                        <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{v.last_service || '—'}</td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                <button className="btn btn-outline btn-sm" style={{ padding: '4px 8px' }} onClick={() => openEdit(v)}><Edit2 size={13} /></button>
+                                                <button className="btn btn-danger btn-sm" style={{ padding: '4px 8px' }} onClick={() => handleDelete(v.id)}><Trash2 size={13} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
 
             {showModal && (
@@ -127,24 +147,24 @@ export default function Vehicles() {
                             <div className="form-grid">
                                 <div className="form-group">
                                     <label className="form-label">Plate Number *</label>
-                                    <input className="form-input" value={form.number} onChange={e => setForm(p => ({ ...p, number: e.target.value }))} placeholder="e.g. TN-09-AB-1234" />
+                                    <input className="form-input" value={form.plate_number} onChange={e => setForm(p => ({ ...p, plate_number: e.target.value }))} placeholder="e.g. TN-09-AB-1234" />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Model *</label>
-                                    <input className="form-input" value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} placeholder="e.g. Toyota Hino" />
+                                    <input className="form-input" value={form.model} onChange={e => setForm(p => ({ ...p, model: e.target.value }))} placeholder="e.g. Tata 407" />
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Type</label>
                                     <select className="form-select" value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}>
-                                        <option>Truck</option>
-                                        <option>Heavy Truck</option>
-                                        <option>Mini Truck</option>
-                                        <option>Loader</option>
+                                        <option>Truck</option><option>Heavy Truck</option><option>Mini Truck</option><option>Loader</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Assigned Driver</label>
-                                    <input className="form-input" value={form.driver} onChange={e => setForm(p => ({ ...p, driver: e.target.value }))} placeholder="Driver name" />
+                                    <select className="form-select" value={form.driver_id} onChange={e => setForm(p => ({ ...p, driver_id: e.target.value }))}>
+                                        <option value="">— Unassigned —</option>
+                                        {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label">Status</label>
@@ -158,7 +178,9 @@ export default function Vehicles() {
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleSave}>{editId ? 'Save Changes' : 'Add Vehicle'}</button>
+                            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                                {saving ? 'Saving…' : editId ? 'Save Changes' : 'Add Vehicle'}
+                            </button>
                         </div>
                     </div>
                 </div>
